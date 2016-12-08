@@ -38,8 +38,7 @@ class Vip extends CI_Controller
                     $vip = 3600 * 24 * 180 + time();
                     return $vip;
                     break;
-                case ($this->time == 3);
-                    //一年会员
+                case ($this->time == 3);//一年会员
                     $vip = 3600 * 24 * 365 + time();
                     return $vip;
                     break;
@@ -99,9 +98,8 @@ class Vip extends CI_Controller
      */
     public function FailedVip()
     {
-        $ordernumber = $this->inpue->post('ordernumber', TRUE);
         if (!empty($this->nickname)) {
-            $add = $this->db->insert('failedvip', array('nickname' => $this->nickname, 'ordernumber' => $ordernumber, 'add_time' => time()));
+            $add = $this->db->insert('failedvip', array('nickname' => $this->nickname, 'add_time' => time()));
             if ($add) {
                 $result['status'] = 'success';
                 echo json_encode($result);
