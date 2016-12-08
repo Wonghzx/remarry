@@ -101,7 +101,7 @@ class Vip extends CI_Controller
     {
         $ordernumber = $this->inpue->post('ordernumber', TRUE);
         if (!empty($this->nickname)) {
-            $add = $this->db->insert('failedvip', array('nickname' => $this->nickname, 'ordernumber' => $ordernumber));
+            $add = $this->db->insert('failedvip', array('nickname' => $this->nickname, 'ordernumber' => $ordernumber, 'add_time' => time()));
             if ($add) {
                 $result['status'] = 'success';
                 echo json_encode($result);
