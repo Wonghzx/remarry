@@ -67,36 +67,9 @@ class Test extends CI_Controller
 //        $show_like = $this->db->query($sql)->result_array();
 //        echo $this->db->last_query();
 //        p($show_like);
-        $sql = " SELECT u.member,u.username,u.nickname,us.sex,u.userid FROM rem_user AS u LEFT JOIN rem_userdata AS us ON u.nickname = us.nickname WHERE member = '1' AND age >= '10' AND age <= '(20+10)' ";
-        $check = $this->db->query($sql)->result_array();
-        echo $this->db->last_query();
-     $tog =  $this->abc('148109329079888');
-
-        $data = array();
-        foreach ($check as $item => $value) {
-
-            $l = in_array('女', $value, TRUE);
-            if ($l) {
-                $data[] = $value;
-            }
-        }
-        $num = "";
-        if (!empty($data)) {
-            $x = @array_rand($data, 1);
-            if ($data[$x]['userid'] == $tog['nickname'] || $data[$x]['userid'] == $tog['targetname']) {
-                $num = "";
-            } else {
-                @$num = $data[$x]['userid'];
-                @$num = $data[$x]['nickname'];
-            }
-
-        }
-      p($num);
-
+        $row = new ServerAPI('bmdehs6pbqj2s', 'qmJhoSdpc95J');
+        $a = $row->userCheckOnline('148124723519687');
+        p($a);
     }
 
-    public function abc()
-    {
-       echo  3600 * 24 * 0.25 + 1481160000;
-    }
 }

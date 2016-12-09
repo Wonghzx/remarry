@@ -98,11 +98,18 @@ class Vip extends CI_Controller
      */
     public function FailedVip()
     {
+        $ordernumber = $this->input->post('ordernumber', TRUE);
         if (!empty($this->nickname)) {
-            $add = $this->db->insert('failedvip', array('nickname' => $this->nickname, 'add_time' => time()));
-            if ($add) {
-                $result['status'] = 'success';
-                echo json_encode($result);
+            $check = $this->db->where('nickname =', $this->nickname)->get('failedvip')->row_array();
+            if ($check == "") {
+                $add = $this->db->insert('failedvip', array('nickname' => $this->nickname, 'ordernumber' => $ordernumber, 'add_time' => time()));
+                if ($add) {
+                    $result['status'] = 'success';
+                    echo json_encode($result);
+                } else {
+                    $result['status'] = 'error';
+                    echo json_encode($result);
+                }
             } else {
                 $result['status'] = 'error';
                 echo json_encode($result);

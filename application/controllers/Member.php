@@ -14,7 +14,7 @@ class Member extends CI_Controller
 //        $this->token = trim($this->input->post('token', TRUE));
         $this->userid = time();
         $this->geohash = new Geohash;
-        $this->row = new ServerAPI('n19jmcy5ni4r9', 'owxorrrP4sLmh6');
+        $this->row = new ServerAPI('bmdehs6pbqj2s', 'qmJhoSdpc95J');
         session_start();
 
     }
@@ -47,20 +47,20 @@ class Member extends CI_Controller
                     break;
                 case (empty($check_username['username']) AND empty($check_nickname['nickname']));
                     //  if (empty($check_user)) {  //不存在等于空执行以下代码
-                    $to = $this->row->getToken($this->userid . $new_str, $this->nickname, "http://119.29.143.48/remarry/icon.png");
+                    $to = $this->row->getToken($this->userid . $new_str, $this->nickname, "http://119.29.143.48/moren/moren.png");
                     $obj = json_decode($to);
                     if ($obj->code != 200) {
                         $result['status'] = "error3";
                         print json_encode($result);
                     } else {
                         $token = $obj->token;
-                        $Seven = 3600 * 24 * 5;  //七天会员
+                        $Seven = 3600 * 24 * 3;  //5天会员
                         $data = array(
                             'username' => $this->username,
                             'password' => $this->password,
                             'nickname' => $this->nickname,
                             'userid' => $this->userid . $new_str,
-                            'photo' => "http://119.29.143.48/remarry/icon.png",
+                            'photo' => "http://119.29.143.48/moren/moren.png",
                             'member' => "1", //默认1   送七天会员
                             'memtime' => $Seven + time(),
                             'token' => $token,
