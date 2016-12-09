@@ -55,24 +55,31 @@ class GeoFin extends CI_Controller
                 $row = "us.nickname,u.photo,us.nowlocal,us.age,us.sex,us.lng,us.lat,us.constellation,us.education,us.car,us.housing,us.height,us.shape";
                 $sql = "SELECT $row FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname WHERE {$where} {$and} latitude LIKE '{$value}%'  ";
                 $check = $this->db->query($sql)->result_array();
-
                 foreach ($check as $ke => $va) {
                     $data[] = $va;
                     $data[$ke]['geohash'] = $lat_it_ud = strval(getDistance($lat, $lng, $va['lat'], $va['lng'])); // 纬度   经度
                 }
 
+            }
+            foreach ($data as $k => $v) {
+                if($v['nickname'] == "红娘"){
+                    unset($data[$k]);
+                }
             }
             if (!empty($data)) {
                 echo json_encode($data, JSON_UNESCAPED_UNICODE);
             }
-            else {
+            else
+            {
                 $sql = "SELECT us.nickname,u.photo,us.nowlocal,us.age,us.sex,us.lng,us.lat,us.constellation,us.education,us.car,us.housing,us.height,us.shape FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname ";
                 $check = $this->db->query($sql)->result_array();
                 foreach ($check as $ke => $va) {
-                    $data[] = $va;
-                    $data[$ke]['geohash'] = $lat_it_ud = strval(getDistance($lat, $lng, $va['lat'], $va['lng'])); // 纬度   经度
+                    $check[$ke]['geohash'] = $lat_it_ud = strval(getDistance($lat, $lng, $va['lat'], $va['lng'])); // 纬度   经度
+                    if($va['nickname'] == "红娘"){
+                        unset($check[$ke]);
+                    }
                 }
-                echo json_encode($data, JSON_UNESCAPED_UNICODE);
+                echo json_encode($check, JSON_UNESCAPED_UNICODE);
             }
         }
 

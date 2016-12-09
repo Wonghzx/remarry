@@ -67,9 +67,17 @@ class Test extends CI_Controller
 //        $show_like = $this->db->query($sql)->result_array();
 //        echo $this->db->last_query();
 //        p($show_like);
-        $row = new ServerAPI('bmdehs6pbqj2s', 'qmJhoSdpc95J');
-        $a = $row->userCheckOnline('148124723519687');
-        p($a);
+
+
+
+        $sql = " SELECT u.member,u.nickname,us.age,us.sex,u.userid FROM rem_user AS u LEFT JOIN rem_userdata AS us ON u.nickname = us.nickname WHERE member = '1' AND age >= 20 AND age <= 20+10";
+        $check = $this->db->query($sql)->result_array();
+
+        foreach ($check as $item => $value) {
+             if($value['nickname'] == "红娘"){
+                 unset($check[$item]);
+             }
+        }
     }
 
 }

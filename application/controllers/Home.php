@@ -62,6 +62,7 @@ class Home extends CI_Controller
             ->result_array();
 
         foreach ($check_info as $key => $item) {
+
             $arr = array();
             foreach ($check_photo as $ke => $value) {
                 if ($item['nickname'] == $value['nickname']) {
@@ -84,18 +85,24 @@ class Home extends CI_Controller
 
             }
             $check_info[$key]['like'] = count($row);
+//            if ($item['nickname'] == "红娘") {
+//                unset($check_info[$key]);
+//            }
 
         }
 
         if (!empty($check_info)) {
             print json_encode($check_info, JSON_UNESCAPED_UNICODE);
+
             $check = $this->db->select('nickname,member,memtime')->where('member =', '1')->get('user')->result_array();
             foreach ($check as $item => $value) {
                 if (time() > $value['memtime']) {
                     $this->db->where(array('memtime' => $value['memtime'], 'member' => '1'))->update('user', array('member' => "0"));
                 }
             }
-        } else {
+        }
+        else
+        {
             $sql = "SELECT us.nickname,u.photo,u.userid,us.age,us.sex,us.height,u.memtime FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname WHERE RAND() LIMIT 0 , 20";
             $check_info = $this->db->query($sql)->result_array();
 
@@ -121,12 +128,13 @@ class Home extends CI_Controller
 
                 }
                 $check_info[$key]['like'] = count($row);
-
+                if ($item['nickname'] == "红娘") {
+                    unset($check_info[$key]);
+                }
             }
-
+            p($check_info);
             print json_encode($check_info, JSON_UNESCAPED_UNICODE);
         }
-//        $this->load->view('ceshi');
     }
 
     /**

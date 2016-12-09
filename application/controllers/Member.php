@@ -151,7 +151,9 @@ class Member extends CI_Controller
             }
             $data = array();
             foreach ($check as $item => $value) {
-
+                if($value['nickname'] == "红娘"){
+                    unset($check[$item]);
+                }
                 $l = in_array($sex, $value, TRUE);
                 if ($l) {
                     $data[] = $value;
@@ -160,18 +162,10 @@ class Member extends CI_Controller
             $num = "";
             if (!empty($data)) {
                 $x = @array_rand($data, 1);
-                if ($data[$x]['userid'] == $row['nickname'] || $data[$x]['userid'] == $row['targetname']) {
-                    $num = "";
-                } else {
+                if (empty($row)) {
                     @$num = $data[$x]['userid'];
                 }
             }
-//            else {
-//                $sql = " SELECT u.nickname,us.sex,u.userid FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname WHERE us.sex = '{$sex}' ";
-//                $c = $this->db->query($sql)->result_array();
-//                $x = @array_rand($c, 1);
-//                @$num .= $c[$x]['userid'];
-//            }
             //------------------------------------------//
             $result = array(
                 'status' => 'success',
@@ -664,9 +658,9 @@ class Member extends CI_Controller
      * @param 2016/12/7
      * @param 16:34
      */
-    private function MyChat($num)
+    protected function MyChat($unm)
     {
-        $sql = " SELECT nickname,targetname FROM rem_mychat WHERE nickname = ('$num') OR  targetname = ('$num') ";
+        $sql = " SELECT nickname,targetname FROM rem_mychat WHERE (nickname = '$unm' OR  targetname = '$unm') ";
         $check_f = $this->db->query($sql)->row_array();
         if (!empty($check_f)) {
             return $check_f;
