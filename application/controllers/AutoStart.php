@@ -24,12 +24,13 @@ class AutoStart extends CI_Controller
 
             if (TIME >= $a AND TIME <= $t) {
                 $data = array(
+                    'type' => "5",
                     'actid' => $value['actid'],
                     'userid' => json_encode($value['userid'])
                 );
                 if (is_array($data)) {
                     echo json_encode($data);
-                    $this->db->where('nickname =', $value['nickname'])->update('participant', array('start' => "0"));
+//                    $this->db->where('nickname =', $value['nickname'])->update('participant', array('start' => "0"));
                 }
             }
         }

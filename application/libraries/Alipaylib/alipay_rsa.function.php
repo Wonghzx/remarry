@@ -36,7 +36,6 @@ function rsaSign($data, $private_key) {
     openssl_free_key($res);
 	//base64编码
     $sign = base64_encode($sign);
-
     return $sign;
 }
 

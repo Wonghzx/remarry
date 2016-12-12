@@ -6,95 +6,26 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @author onwulc@163.com
  *
  */
-require_once APPPATH . "models/alipay/alipay_notify.class.php";
-require_once APPPATH . "models/alipay/alipay_submit.class.php";
-
 class Alipay extends CI_Controller
 {
+    private $product = [
+        'vip_30' => 10.00,
+        'vip_180' => 50.00,
+        'vip_365' => 100.00,
+    ];
+
     function __construct()
     {
         parent::__construct();
-//        $this->load->model('order_model');
     }
 
     public function index()
     {
 
-        $input_charset = $this->config->item('alipay_config');
+        $rsa_private = "MIICdgIBADANBgkqhkiG9w0BAQEFAASCAmAwggJcAgEAAoGBALmC15MgLbXpeeGX193CU+QeAS5Ptzq2heieH//InIv+4cbZqoXZLdMbxan0mQ1iBv9XS921RF8IEPC+rgQxdmp3qc85nSt2MvVDUgbBOssxahdrPXQn/rYXu9XGd5B/2tjkTVPUlUURxJ8XrHK7fJeaqAWpaLNiHxF+X6ZXnmVnAgMBAAECgYB2QKGKd4ir3RiEZXaFNcqkLzwxeT8jfhX+Ik3jjs27r83cJAQ/LiG34IwvumuVzFcJjWwe992NdmbWD7Z9lcoVHCeN6beEKrlz1uO4M8HEPoJ8yCJ0/ub7jda5O/Ddv5F5UG4fuBB2MTPDFcMYpg7QfbconD5J7X0hmLxHnKszAQJBAPZQQMKKtMnUn27tuJongyCHFSS4IZRTIpRqrx5njuSyQ5s2tE1N/HrvtbwDHubaTvUNhxlAQYFnzIWXs75cRHkCQQDAznbtFkzkRQxK4k0HP0Flp+pikRsS9aKuP1x3wvrvrfhmKaSv3mJdgusQhQ9WgAZ8krW+GYEAu+Ia0PdABMDfAkA9KvLaHP4GfTHWp1xHk/ZhVopuovdb0UVuHAw+/bKjoo1ddzlRVUOU+ABmn1PGOoKPInvhTm62ByPoLSMq69jpAkB9i3Mg+i5jTRquACFMIMJCoU4blITemZeugo+BZDLlspBWZbNY2SOP5FmPzjSojICsyRMSj6TSh4S5FWyKAQ5dAkEAzqpRKwv6cemOurs9TQ0RFvA/Nh/qobxRGaH9tp/SKl1rdeIG/mq7Tts4oc1b9pC2oYoBnwgB7uR9zFZUAozd5g==";
 
+        echo $rsa_private;
 
-
-//        $alipayNotify = new AlipayNotify($input_charset);
-//        $verify_result = $alipayNotify->verifyNotify();
-
-
-//        if ($verify_result) {
-//            $out_trade_no = $this->input->post('out_trade_no', TRUE);
-//            //支付宝交易号
-//            $trade_no = $this->input->post('trade_no', TRUE);
-//            //交易状态
-//            $trade_status = $this->input->post('trade_status', TRUE);
-//            $this->log_result('alipay_notify', "【支付宝回调App】:\n" . json_encode($_POST) . "\n");
-//            if ($trade_status == 'TRADE_FINISHED' || $trade_status == 'TRADE_SUCCESS') {
-////                //判断该笔订单是否在商户网站中已经做过处理
-////                //如果没有做过处理，根据订单号（out_trade_no）在商户网站的订单系统中查到该笔订单的详细，并执行商户的业务程序
-////                //如果有做过处理，不执行商户的业务程序
-////
-//                $order = $this->order_model->get_order_info($out_trade_no);
-////
-//                if ($order['TradeStatus'] != 'TRADE_FINISHED' && $order['TradeStatus'] != 'TRADE_SUCCESS') {
-//                    $data = array('TradeStatus' => $trade_status, 'TradeNo' => $trade_no, 'PayTime' => time(), 'PayType' => 'alipay');
-//                    $this->order_model->update_order_info($out_trade_no, $data);
-//                }
-//            }
-//            //——请根据您的业务逻辑来编写程序（以上代码仅作参考）——
-//            echo "success";        //请不要修改或删除
-//        } else {
-//            //验证失败
-//            echo "error";
-//
-//            //调试用，写文本函数记录程序运行情况是否正常
-//            //logResult("这里写入想要调试的代码变量值，或其他运行的结果记录");
-//        }
-
-        //商户订单号，商户网站订单系统中唯一订单号，必填
-        $out_trade_no = $this->input->post('WIDout_trade_no', TRUE);
-
-        //订单名称，必填
-        $subject = $this->input->post('WIDsubject', TRUE);
-
-        //付款金额，必填
-        $total_fee = $this->input->post('WIDtotal_fee', TRUE);
-
-        //收银台页面上，商品展示的超链接，必填
-        $show_url = $this->input->post('WIDshow_url', TRUE);
-
-        //商品描述，可空
-        $body = $this->input->post('WIDbody', TRUE);
-
-        $parameter = array(
-            "service" => 'alipay.wap.create.direct.pay.by.user',
-            "partner" => $input_charset['partner'],
-            "seller_id" => $input_charset['partner'],
-            "payment_type" => 1,
-            "notify_url" => $input_charset['notify_url'],
-            "return_url" => $input_charset['return_url'],
-            "_input_charset" => trim(strtolower($input_charset['input_charset'])),
-            "out_trade_no" => $out_trade_no,
-            "subject" => $subject,
-            "total_fee" => $total_fee,
-            "show_url" => $show_url,
-            //"app_pay"	=> "Y",//启用此参数能唤起钱包APP支付宝
-            "body" => $body,
-            //其他业务参数根据在线开发文档，添加参数.文档地址:https://doc.open.alipay.com/doc2/detail.htm?spm=a219a.7629140.0.0.2Z6TSk&treeId=60&articleId=103693&docType=1
-            //如"参数名"	=> "参数值"   注：上一个参数末尾需要“,”逗号。
-        );
-
-        $alipaySubmit = new AlipaySubmit($parameter);
-//        $html_text = $alipaySubmit->buildRequestForm($parameter, "get", "确认");
-//        echo($html_text);
-
-        $this->load->view('ceshi');
     }
 
     function log_result($log_type, $word)
@@ -104,6 +35,36 @@ class Alipay extends CI_Controller
             'CreatedAt' => time(),
             'Log' => strftime("%Y-%m-%d-%H：%M：%S", time()) . "\n" . $word . "\n\n"
         );
-        //$this->db->insert('sys_logs', $data);
     }
+
+    public function createOrder()
+    {
+        //买什么、谁买、购买时间、多少钱、订单号、订单状态（ -1 0 1  ）
+        list($usec, $sec) = explode(" ", microtime());
+        $unm = date('YmdHis', $sec) . (int)($usec * 10000);
+
+        $data = array(
+            'body' => "会员",
+            'subject' => '大乐透',
+            'out_trade_no' => $unm,
+            'total_amount' => 9,
+            'product_code' => 'QUICK_WAP_PAY'
+        );
+        $this->load->library('Alipay', $data);
+
+
+    }
+
+
+    public function pay_callback()
+    {
+
+    }
+
+    public function pay_callback2()
+    {
+
+    }
+
+
 }

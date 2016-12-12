@@ -98,7 +98,7 @@ class Activity extends CI_Controller
                     if (time() > $va['endtime']) {
                         $this->db->where('endtime', $va['endtime'])->update('activity', array('state' => "0"));
                     }
-                    $t = 3600 * 24 * 0.25 + $va['endtime'];//活动时间到期7天自动删除
+                    $t = 3600 * 24 * 7 + $va['endtime'];//活动时间到期7天自动删除
                     if (time() == $t || time() > $t) {
                         $id = $this->db->select('id')->where('state =', "0")->get('activity')->result_array();
                       //查出活动到期7天后删除

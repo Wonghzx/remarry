@@ -81,7 +81,8 @@ class Member extends CI_Controller
                                 'username' => $check_user_data['username'],
                                 'sex' => $this->input->post('sex', TRUE),
                                 'birthday' => $this->input->post('birthday', TRUE),
-                                'age' => floor(date('Y.m.d') - $this->input->post('birthday', TRUE))
+                                'age' => floor(date('Y.m.d') - $this->input->post('birthday', TRUE)),
+                                'status' => '1'
                             );
                             $this->db->insert('userdata', $dat);
                             $this->db->insert('mymates', array('nickname' => $check_user_data['nickname']));
@@ -151,9 +152,7 @@ class Member extends CI_Controller
             }
             $data = array();
             foreach ($check as $item => $value) {
-                if($value['nickname'] == "红娘"){
-                    unset($check[$item]);
-                }
+
                 $l = in_array($sex, $value, TRUE);
                 if ($l) {
                     $data[] = $value;
@@ -162,7 +161,7 @@ class Member extends CI_Controller
             $num = "";
             if (!empty($data)) {
                 $x = @array_rand($data, 1);
-                if (empty($row)) {
+                if (empty($row) AND $data[$x]['userid'] != '148125000229772') {
                     @$num = $data[$x]['userid'];
                 }
             }

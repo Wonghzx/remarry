@@ -11,6 +11,6 @@ class Version extends CI_Controller
             ->limit(1)
             ->get('version')
             ->row_array();
-        echo json_encode($check, JSON_UNESCAPED_UNICODE);
+        print json_encode($check, JSON_UNESCAPED_UNICODE);
     }
 }

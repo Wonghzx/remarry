@@ -4,6 +4,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Home extends CI_Controller
 {
 
+    static $data = array();
+
     /**
      * Home constructor.
      * 构造方法
@@ -37,7 +39,7 @@ class Home extends CI_Controller
             if (!empty($this->sex)) {
                 if ($this->sex == "男") {
                     $where[] = "us.sex = '女' ";
-                } else if ($this->sex == "女") {
+                } else {
                     $where[] = " us.sex = '男' ";
                 }
             }
@@ -50,7 +52,7 @@ class Home extends CI_Controller
             $where = " RAND() LIMIT  20 ";
         }
 
-        $sql = "SELECT us.nickname,u.photo,u.userid,us.age,us.sex,us.height,u.memtime FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname WHERE {$where} {$rand}";
+        $sql = "SELECT us.nickname,u.photo,u.userid,us.age,us.sex,us.height,u.memtime FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname WHERE us.status = '1' AND {$where}   {$rand}  ";
         $check_info = $this->db->query($sql)->result_array();
 
         $check_photo = $this->db->select('nickname,photourl')
@@ -61,6 +63,7 @@ class Home extends CI_Controller
             ->get('friends')
             ->result_array();
 
+        $unm = "";
         foreach ($check_info as $key => $item) {
 
             $arr = array();
@@ -70,13 +73,7 @@ class Home extends CI_Controller
                 }
             }
             $check_info[$key]['countphoto'] = count($arr);
-//            if (!empty($check_info[$key]['countphoto'])) {
-//                $count_photo = count($check_info[$key]['countphoto']);
-//            } else {
-//                $count_photo = 0;
-//            }
-//            $check_info[$key]['countphoto'] = $count_photo;
-            //--------------------------------------------//
+
             $row = array();
             foreach ($check_friends as $k => $v) {
                 if ($item['nickname'] == $v['tarname']) {
@@ -86,54 +83,47 @@ class Home extends CI_Controller
             }
             $check_info[$key]['like'] = count($row);
 //            if ($item['nickname'] == "红娘") {
-//                unset($check_info[$key]);
+//                $unm = $key;
 //            }
-
         }
-
+//        unset($check_info[$unm]);
         if (!empty($check_info)) {
-            print json_encode($check_info, JSON_UNESCAPED_UNICODE);
-
+            echo json_encode($check_info, JSON_UNESCAPED_UNICODE);
             $check = $this->db->select('nickname,member,memtime')->where('member =', '1')->get('user')->result_array();
             foreach ($check as $item => $value) {
                 if (time() > $value['memtime']) {
                     $this->db->where(array('memtime' => $value['memtime'], 'member' => '1'))->update('user', array('member' => "0"));
                 }
             }
-        }
-        else
-        {
-            $sql = "SELECT us.nickname,u.photo,u.userid,us.age,us.sex,us.height,u.memtime FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname WHERE RAND() LIMIT 0 , 20";
-            $check_info = $this->db->query($sql)->result_array();
-
-            $check_photo = $this->db->select('nickname,photourl')
-                ->get('useralbum')
-                ->result_array();
-
-            foreach ($check_info as $key => $item) {
-                $arr = array();
-                foreach ($check_photo as $ke => $value) {
-                    if ($item['nickname'] == $value['nickname']) {
-                        $arr[] = $value['photourl'];
-                    }
-                }
-                $check_info[$key]['countphoto'] = count($arr);
-
-
-                $row = array();
-                foreach ($check_friends as $k => $v) {
-                    if ($item['nickname'] == $v['tarname']) {
-                        $row[] = $v['tarname'];
-                    }
-
-                }
-                $check_info[$key]['like'] = count($row);
-                if ($item['nickname'] == "红娘") {
-                    unset($check_info[$key]);
-                }
-            }
-            p($check_info);
-            print json_encode($check_info, JSON_UNESCAPED_UNICODE);
+        } else {
+//            $sql = "SELECT us.nickname,u.photo,u.userid,us.age,us.sex,us.height,u.memtime FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname WHERE RAND() LIMIT 0 , 20";
+//            $check_info = $this->db->query($sql)->result_array();
+//
+//            $check_photo = $this->db->select('nickname,photourl')
+//                ->get('useralbum')
+//                ->result_array();
+//
+//            foreach ($check_info as $key => $item) {
+//                if ($item['nickname'] == "红娘") {
+//                    unset($check_info[$key]);
+//                }
+//                $arr = array();
+//                foreach ($check_photo as $ke => $value) {
+//                    if ($item['nickname'] == $value['nickname']) {
+//                        $arr[] = $value['photourl'];
+//                    }
+//                }
+//                $check_info[$key]['countphoto'] = count($arr);
+//                $row = array();
+//                foreach ($check_friends as $k => $v) {
+//                    if ($item['nickname'] == $v['tarname']) {
+//                        $row[] = $v['tarname'];
+//                    }
+//                }
+//                $check_info[$key]['like'] = count($row);
+//
+//            }
+//            print json_encode($check_info, JSON_UNESCAPED_UNICODE);
         }
     }
 

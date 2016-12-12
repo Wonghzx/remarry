@@ -26,11 +26,10 @@ class Waterfall extends CI_Controller
                 ->get('friends')
                 ->result_array();
 
-            $sql = " SELECT us.nickname,u.photo,us.age,us.height,us.monologue,u.member FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname  {$where}";
+            $sql = " SELECT us.nickname,u.photo,us.age,us.height,us.monologue,u.member FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname  {$where} AND us.status = '1' ";
             $check_info = $this->db->query($sql)->result_array();
             $row = array();
             foreach ($check_info as $item => $value) {
-
                 $data = array();
                 foreach ($check_friends as $it => $va) {
                     if ($value['nickname'] == $va['tarname']) {
@@ -39,16 +38,12 @@ class Waterfall extends CI_Controller
                 }
                 $check_info[$item]['like'] = count($data);
                 $row[] = $value['member'];
-                if($value['nickname'] == "红娘"){
-                   unset($check_info[$item]);
-                }
+
             }
-            @array_multisort($row,SORT_DESC,$check_info);
+            @array_multisort($row, SORT_DESC, $check_info);
             if (!empty($check_info)) {
-                print json_encode($check_info, JSON_UNESCAPED_UNICODE);
-            }
-            else
-            {
+                echo json_encode($check_info, JSON_UNESCAPED_UNICODE);
+            } else {
                 $sql = " SELECT us.nickname,u.photo,us.age,us.height,us.monologue FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname ";
                 $check_info = $this->db->query($sql)->result_array();
                 foreach ($check_info as $item => $value) {
@@ -59,11 +54,11 @@ class Waterfall extends CI_Controller
                         }
                     }
                     $check_info[$item]['like'] = count($data);
-                    if($value['nickname'] == "红娘"){
+                    if ($value['nickname'] == "红娘") {
                         unset($check_info[$item]);
                     }
                 }
-                print json_encode($check_info, JSON_UNESCAPED_UNICODE);
+                echo json_encode($check_info, JSON_UNESCAPED_UNICODE);
             }
         }
     }

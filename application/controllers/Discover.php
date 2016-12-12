@@ -40,9 +40,8 @@ class Discover extends CI_Controller
             array_push($neighbors, $prefix);
             $data = array();
 
-//            @file_put_contents('./log.log', json_encode($neighbors, JSON_UNESCAPED_UNICODE), FILE_APPEND);
             foreach ($neighbors as $key => $val) {
-                $sql = " SELECT us.sex,us.nickname,u.photo,us.lng,us.lat FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname {$where[0]}  latitude LIKE '{$val}%' ";
+                $sql = " SELECT us.sex,us.nickname,u.photo,us.lng,us.lat FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname {$where[0]}  latitude LIKE '{$val}%' AND us.status = '1' ";
                 $check = $this->db->query($sql)->result_array();
 
                 foreach ($check as &$value) {
@@ -52,7 +51,7 @@ class Discover extends CI_Controller
             if (!empty($data)) {
                 print json_encode($data, JSON_UNESCAPED_UNICODE);
             } else {
-                $sql = " SELECT us.sex,us.nickname,u.photo,us.lng,us.lat FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname  ";
+                $sql = " SELECT us.sex,us.nickname,u.photo,us.lng,us.lat FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname WHERE  us.status = '1'";
                 $check = $this->db->query($sql)->result_array();
                 print json_encode($check, JSON_UNESCAPED_UNICODE);
             }
