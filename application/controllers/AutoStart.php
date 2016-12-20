@@ -7,34 +7,13 @@ class AutoStart extends CI_Controller
     function __construct()
     {
         parent::__construct();
-        $this->row = new ServerAPI('bmdehs6pbqj2s', 'qmJhoSdpc95J');
+//        $this->row = new ServerAPI('bmdehs6pbqj2s', 'qmJhoSdpc95J');
     }
 
     public function Start()
     {
-        define("TIME",time());
-        $sql = " SELECT p.actid,a.starttime,p.nickname,u.userid FROM rem_participant AS p LEFT JOIN rem_activity AS a ON p.actid = a.id LEFT JOIN rem_user AS u ON p.nickname = u.nickname WHERE p.start = '1' ";
+        $sql = " SELECT u.member,u.nickname,us.age,us.sex,u.userid FROM rem_user AS u LEFT JOIN rem_userdata AS us ON u.nickname = us.nickname WHERE member = '1' AND age >= 20 AND age <= 20+10";
         $check = $this->db->query($sql)->result_array();
-
-        $day = 3600 * 24 * 1;
-        foreach ($check as $key => $value) {
-            $t = strtotime($value['starttime']);
-
-            $a = $t - 2400;
-
-            if (TIME >= $a AND TIME <= $t) {
-                $data = array(
-                    'type' => "5",
-                    'actid' => $value['actid'],
-                    'userid' => json_encode($value['userid'])
-                );
-                if (is_array($data)) {
-                    echo json_encode($data);
-//                    $this->db->where('nickname =', $value['nickname'])->update('participant', array('start' => "0"));
-                }
-            }
-        }
-
-
+        p($check);
     }
 }

@@ -16,7 +16,7 @@ class Alipay
      */
     public function __construct()
     {
-//        $this->ci =& get_instance();
+        $this->ci =& get_instance();
         $this->alipay = new AopClient;
         $this->alipay->appId = $this->ci->config->item('app_id');
         $this->alipay->rsaPrivateKey = $this->ci->config->item('private_key');
@@ -27,12 +27,13 @@ class Alipay
      */
     public function payOrder(array $content)
     {
-        require_once './aop/AlipayTradeAppPayRequest.php';
+       require_once './aop/AlipayTradeAppPayRequest.php';
+
         $request = new AlipayTradeAppPayRequest();
         $request->setBizContent(json_encode($content));
-        $request->setNotifyUrl();
-        $request->setReturnUrl();
-        $request->setNeedEncrypt();
+//        $request->setNotifyUrl();
+//        $request->setReturnUrl();
+//        $request->setNeedEncrypt();
         return  $this->alipay->execute($request);
     }
 

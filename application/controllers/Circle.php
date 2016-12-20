@@ -4,6 +4,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Circle extends CI_Controller
 {
 
+    private $nickname;
+
     /**
      * Circle constructor.
      */
@@ -70,6 +72,14 @@ class Circle extends CI_Controller
                     $result['status'] = "success";
                     $result['id'] = (string)$id;
                     print json_encode($result);
+                    $member = $this->db->select('member')->where('nickname =', $this->nickname)->get('user')->row_array();
+                    if ((int)$member == 1) {
+                        $sql = "UPDATE rem_grade SET memberintegral = memberintegral+1,integral = integral+1 WHERE nickname = '$this->nickname'";
+                    } else {
+                        $sql = "UPDATE rem_grade SET integral = integral+1 WHERE nickname = '$this->nickname'";
+                    }
+                    $this->db->query($sql);
+
                 } else {
                     $result['status'] = "error";
                     print json_encode($result);
@@ -240,14 +250,17 @@ class Circle extends CI_Controller
             @unlink('./' . $url_p);
         }
         if (!empty($id)) {
-            $DelCir = $this->db->delete('circle', array('id' => $id));
-            if ($DelCir) {
-                $DelComm = $this->db->delete('circle_comment', array('circleid' => $id));
-                if ($DelComm) {
-                    $DelReply = $this->db->delete('circle_reply', array('circleid' => $id));
-                    if ($DelReply) {
-                        $result['status'] = "success";
-                        echo json_encode($result);
+            $delCir = $this->db->delete('circle', array('id' => $id));
+            if ($delCir) {
+                $delComm = $this->db->delete('circle_comment', array('circleid' => $id));
+                if ($delComm) {
+                    $delReply = $this->db->delete('circle_reply', array('circleid' => $id));
+                    if ($delReply) {
+                        $delLike = $this->db->delete('like', array('circleid' => $id));
+                        if ($delLike) {
+                            $result['status'] = "success";
+                            echo json_encode($result);
+                        }
                     }
                 }
             }

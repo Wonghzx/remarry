@@ -3,9 +3,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class GrabData extends CI_Controller
 {
+    public $time;
+
     function __construct()
     {
         parent::__construct();
+        $this->time = time();
     }
 
     /**
@@ -23,10 +26,14 @@ class GrabData extends CI_Controller
             $add = $this->db->where('nickname =', $json['nickname'])->update('grabdata', array('data_json' => $data_json));
             if ($add) {
                 $result['status'] = "success";
-                print json_encode($result);
+                echo json_encode($result);
+                $time = $this->db->select('add_time')->where('nickname =', $json['nickname'])->get('grade')->row_array();
+                if (date('j') == date('j', $time['add_time']) || date('j') > date('j', $time['add_time'])) {
+                    $this->db->where('nickname =', $json['nickname'])->update('grade', array('signout_time' => $this->time));
+                }
             } else {
                 $result['status'] = "error";
-                print json_encode($result);
+                echo json_encode($result);
             }
         }
     }

@@ -4,6 +4,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Activity extends CI_Controller
 {
 
+    private $sponsor;
+
     /**
      * Activity constructor.
      */
@@ -47,6 +49,20 @@ class Activity extends CI_Controller
                 if ($add_info) {
                     $result['status'] = "success";
                     print json_encode($result);
+                    $this->load->model('Grade_Models');
+                    $grade = $this->Grade_Models->gradeQuery($this->sponsor);
+                    if ((int)$grade['member'] == 1) {
+                        $data = array(
+                            'memberintegral' => $grade['memberintegral'] + 1,
+                            'integral' => $grade['integral'] + 1
+                        );
+                    } else {
+                        $data = array(
+                            'integral' => $grade['integral'] + 1
+                        );
+                    }
+                     $this->db->where('nickname =', $this->sponsor)
+                        ->update('grade', $data);
                 } else {
                     $result['status'] = "error";
                     print json_encode($result);
@@ -101,7 +117,7 @@ class Activity extends CI_Controller
                     $t = 3600 * 24 * 7 + $va['endtime'];//活动时间到期7天自动删除
                     if (time() == $t || time() > $t) {
                         $id = $this->db->select('id')->where('state =', "0")->get('activity')->result_array();
-                      //查出活动到期7天后删除
+                        //查出活动到期7天后删除
                         foreach ($id as &$val) {
                             $this->db->delete('participant', array('actid' => $val['id']));
                         }
@@ -218,10 +234,10 @@ class Activity extends CI_Controller
     {
         $id = $this->input->post('id', TRUE);
         if (!empty($this->input->post())) {
-            $DelAct = $this->db->delete('activity', array('id' => $id));
-            if ($DelAct) {
-                $DelPar = $this->db->delete('participant', array('actid' => $id));
-                if ($DelPar) {
+            $delAct = $this->db->delete('activity', array('id' => $id));
+            if ($delAct) {
+                $delPar = $this->db->delete('participant', array('actid' => $id));
+                if ($delPar) {
                     $result['status'] = "success";
                     print json_encode($result);
                 } else {

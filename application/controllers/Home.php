@@ -5,6 +5,11 @@ class Home extends CI_Controller
 {
 
     static $data = array();
+    private $province;
+
+    private $age;
+
+    private $sex;
 
     /**
      * Home constructor.
@@ -52,7 +57,7 @@ class Home extends CI_Controller
             $where = " RAND() LIMIT  20 ";
         }
 
-        $sql = "SELECT us.nickname,u.photo,u.userid,us.age,us.sex,us.height,u.memtime FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname WHERE us.status = '1' AND {$where}   {$rand}  ";
+        $sql = "SELECT us.nickname,u.photo,u.userid,us.age,us.sex,us.height,us.constellation,u.memtime,g.membergrade,g.grade FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname LEFT JOIN rem_grade AS g ON us.nickname = g.nickname WHERE us.status = '1' AND {$where}   {$rand}  ";
         $check_info = $this->db->query($sql)->result_array();
 
         $check_photo = $this->db->select('nickname,photourl')
@@ -82,11 +87,7 @@ class Home extends CI_Controller
 
             }
             $check_info[$key]['like'] = count($row);
-//            if ($item['nickname'] == "红娘") {
-//                $unm = $key;
-//            }
         }
-//        unset($check_info[$unm]);
         if (!empty($check_info)) {
             echo json_encode($check_info, JSON_UNESCAPED_UNICODE);
             $check = $this->db->select('nickname,member,memtime')->where('member =', '1')->get('user')->result_array();
@@ -96,34 +97,32 @@ class Home extends CI_Controller
                 }
             }
         } else {
-//            $sql = "SELECT us.nickname,u.photo,u.userid,us.age,us.sex,us.height,u.memtime FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname WHERE RAND() LIMIT 0 , 20";
-//            $check_info = $this->db->query($sql)->result_array();
-//
-//            $check_photo = $this->db->select('nickname,photourl')
-//                ->get('useralbum')
-//                ->result_array();
-//
-//            foreach ($check_info as $key => $item) {
-//                if ($item['nickname'] == "红娘") {
-//                    unset($check_info[$key]);
-//                }
-//                $arr = array();
-//                foreach ($check_photo as $ke => $value) {
-//                    if ($item['nickname'] == $value['nickname']) {
-//                        $arr[] = $value['photourl'];
-//                    }
-//                }
-//                $check_info[$key]['countphoto'] = count($arr);
-//                $row = array();
-//                foreach ($check_friends as $k => $v) {
-//                    if ($item['nickname'] == $v['tarname']) {
-//                        $row[] = $v['tarname'];
-//                    }
-//                }
-//                $check_info[$key]['like'] = count($row);
-//
-//            }
-//            print json_encode($check_info, JSON_UNESCAPED_UNICODE);
+            $sql = "SELECT us.nickname,u.photo,u.userid,us.age,us.sex,us.height,us.constellation,u.memtime,g.membergrade,g.grade FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname LEFT JOIN rem_grade AS g ON us.nickname = g.nickname WHERE  us.status = '1' AND RAND() LIMIT 0 , 20";
+            $check_info = $this->db->query($sql)->result_array();
+
+            $check_photo = $this->db->select('nickname,photourl')
+                ->get('useralbum')
+                ->result_array();
+
+            foreach ($check_info as $key => $item) {
+
+                $arr = array();
+                foreach ($check_photo as $ke => $value) {
+                    if ($item['nickname'] == $value['nickname']) {
+                        $arr[] = $value['photourl'];
+                    }
+                }
+                $check_info[$key]['countphoto'] = count($arr);
+                $row = array();
+                foreach ($check_friends as $k => $v) {
+                    if ($item['nickname'] == $v['tarname']) {
+                        $row[] = $v['tarname'];
+                    }
+                }
+                $check_info[$key]['like'] = count($row);
+
+            }
+            print json_encode($check_info, JSON_UNESCAPED_UNICODE);
         }
     }
 
@@ -135,18 +134,18 @@ class Home extends CI_Controller
      */
     public function AddFriend()
     {
-        $this->nickname = trim($this->input->post('nickname', TRUE));
-        $this->tarname = trim($this->input->post('tarname', TRUE));
+        $nickname = trim($this->input->post('nickname', TRUE));
+        $tarname = trim($this->input->post('tarname', TRUE));
 
-        $sql = " SELECT id,state FROM rem_friends WHERE nickname IN ('{$this->nickname}','{$this->tarname}') AND  tarname IN ('{$this->nickname}','{$this->tarname}') ";
+        $sql = " SELECT id,state FROM rem_friends WHERE nickname IN ('{$nickname}','{$tarname}') AND  tarname IN ('{$nickname}','{$tarname}') ";
         $check_f = $this->db->query($sql)->row_array();
 
-        switch ($this->nickname) {
+        switch ($nickname) {
             case (empty($check_f));
                 try {
                     $data = array(
-                        'nickname' => $this->nickname,
-                        'tarname' => $this->tarname,
+                        'nickname' => $nickname,
+                        'tarname' => $tarname,
                         'state' => "0",
                         'add_time' => time()
                     );
@@ -167,8 +166,8 @@ class Home extends CI_Controller
             case ($check_f['state'] == "0");
 
                 $arr = array(
-                    'nickname' => $this->nickname,
-                    'tarname' => $this->tarname
+                    'nickname' => $nickname,
+                    'tarname' => $tarname
                 );
                 $check_user = $this->db->where($arr)
                     ->get('friends')
@@ -176,12 +175,12 @@ class Home extends CI_Controller
                 if ($check_user == "") {
                     $data = array(
                         'state' => "1"
-
-
                     );
                     $up_win = $this->db->where('id =', $check_f['id'])
                         ->update('friends', $data);
                     if ($up_win) {
+                        $sql = "UPDATE rem_grade SET memberintegral = memberintegral+1,integral = integral+1 WHERE nickname = '$nickname'";
+                        $this->db->query($sql);
                         $result['status'] = 'like';
                         echo json_encode($result);
                     }

@@ -30,6 +30,9 @@ class Waterfall extends CI_Controller
             $check_info = $this->db->query($sql)->result_array();
             $row = array();
             foreach ($check_info as $item => $value) {
+//                if ($value['nickname'] == "红娘") {
+//                    unset($check_info[$item]);
+//                }
                 $data = array();
                 foreach ($check_friends as $it => $va) {
                     if ($value['nickname'] == $va['tarname']) {

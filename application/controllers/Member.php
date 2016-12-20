@@ -4,6 +4,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Member extends CI_Controller
 {
 
+    public $time;
+
+    public $username;
+
+    public $nickname;
+
+    protected $password;
+
     function __construct()
     {
         parent::__construct();
@@ -12,7 +20,7 @@ class Member extends CI_Controller
         $this->nickname = trim($this->input->post('nickname', TRUE));
         $this->tarname = $this->input->post('tarname', TRUE);
 //        $this->token = trim($this->input->post('token', TRUE));
-        $this->userid = time();
+        $this->time = time();
         $this->geohash = new Geohash;
         $this->row = new ServerAPI('bmdehs6pbqj2s', 'qmJhoSdpc95J');
         session_start();
@@ -31,41 +39,41 @@ class Member extends CI_Controller
         $length = 5;
         $new_str = substr(str_shuffle($listAlpha), 0, $length); //打乱字符串
 
-//        @file_put_contents('./log.log', $this->userid . $new_str, FILE_APPEND);
         if (!empty($this->input->post())) {
 
             $check_username = $this->db->select('username')->where(array('username' => $this->username))->get('user')->row_array(); //查询用户是否存在
             $check_nickname = $this->db->select('nickname')->where(array('nickname' => $this->nickname))->get('user')->row_array(); //查询用户是否存在
+
             switch ($this->nickname) {
                 case(!empty($check_username['username']));
                     $result['status'] = "phone";
-                    print json_encode($result);
+                    echo json_encode($result);
                     break;
                 case (!empty($check_nickname['nickname']));
                     $result['status'] = "nickname";
-                    print json_encode($result);
+                    echo json_encode($result);
                     break;
                 case (empty($check_username['username']) AND empty($check_nickname['nickname']));
-                    //  if (empty($check_user)) {  //不存在等于空执行以下代码
-                    $to = $this->row->getToken($this->userid . $new_str, $this->nickname, "http://119.29.143.48/moren/moren.png");
+                    $to = $this->row->getToken($this->time . $new_str, $this->nickname, "http://119.29.143.48/moren/moren.jpg");
                     $obj = json_decode($to);
                     if ($obj->code != 200) {
                         $result['status'] = "error3";
-                        print json_encode($result);
+                        echo json_encode($result);
                     } else {
                         $token = $obj->token;
                         $Seven = 3600 * 24 * 3;  //5天会员
                         $data = array(
-                            'username' => $this->username,
-                            'password' => $this->password,
-                            'nickname' => $this->nickname,
-                            'userid' => $this->userid . $new_str,
-                            'photo' => "http://119.29.143.48/moren/moren.png",
-                            'member' => "1", //默认1   送七天会员
-                            'memtime' => $Seven + time(),
+                            'username' => trim($this->username),
+                            'password' => trim($this->password),
+                            'nickname' => trim($this->nickname),
+                            'userid' => $this->time . $new_str,
+                            'photo' => "http://119.29.143.48/moren/moren.jpg",
+                            'member' => "1", //默认1   送3天会员
+                            'memtime' => $Seven + $this->time,
                             'token' => $token,
                             'autstate' => "0",
-                            'add_time' => time()
+                            'login_time' => $this->time,
+                            'add_time' => $this->time
                         );
                         $add_user = $this->db->insert('user', $data);
                         if ($add_user > 0) {
@@ -87,6 +95,7 @@ class Member extends CI_Controller
                             $this->db->insert('userdata', $dat);
                             $this->db->insert('mymates', array('nickname' => $check_user_data['nickname']));
                             $this->db->insert('grabdata', array('nickname' => $check_user_data['nickname']));
+                            $this->db->insert('grade', array('nickname' => $check_user_data['nickname'], 'add_time' => $this->time, 'status' => $this->time));
                         } else {
                             $result['status'] = "error1";
                             print json_encode($result);
@@ -109,7 +118,7 @@ class Member extends CI_Controller
     public function Login()
     {
 
-        $sql = " SELECT id,username,nickname,photo,userid,member,memtime,token,autstate,add_time FROM rem_user WHERE  (nickname = '{$this->nickname}' OR username = '{$this->nickname}') AND password = '{$this->password}' ";
+        $sql = " SELECT id,username,nickname,photo,userid,member,memtime,token,autstate,add_time,login_time FROM rem_user WHERE  (nickname = '{$this->nickname}' OR username = '{$this->nickname}') AND password = '{$this->password}' ";
         $check_user = $this->db->query($sql)->row_array();
 
         if (!empty($check_user)) {
@@ -118,6 +127,7 @@ class Member extends CI_Controller
             } else {
                 $where = "nickname";
             }
+//            $this->db->where("$where =", $this->nickname)->update('grade', array('online_time' => $this->time));
             $data = array(
                 'province' => trim($this->input->post('province', TRUE)),
                 'lng' => $this->input->post('lng', TRUE),//更新经度
@@ -128,9 +138,10 @@ class Member extends CI_Controller
             $this->db->where("$where =", $this->nickname)
                 ->update('userdata', $data);
 
-            $add_check = $this->db->select('u.age,u.sex,u.province,g.data_json')
+            $add_check = $this->db->select('u.age,u.sex,u.province,g.data_json,gr.membergrade,gr.grade')
                 ->from('userdata AS u')
                 ->join('grabdata AS g', 'u.nickname = g.nickname', 'left')
+                ->join('grade AS gr', 'u.nickname = gr.nickname', 'left')
                 ->where("u.$where =", $this->nickname)
                 ->get('userdata')
                 ->row_array();
@@ -138,36 +149,40 @@ class Member extends CI_Controller
             if (time() >= $check_user['memtime']) {
                 $this->db->where("$where =", $this->nickname)->update('user', array('member' => "0"));//大于更新会员过期
             }
-
-            //----------------↓好友主动推送↓--------------//
-            $row = $this->MyChat($check_user['userid']);
-            $sql = " SELECT u.member,u.nickname,us.age,us.sex,u.userid FROM rem_user AS u LEFT JOIN rem_userdata AS us ON u.nickname = us.nickname WHERE member = '1' AND age >= {$add_check['age']} AND age <= {$add_check['age']}+10";
-            $check = $this->db->query($sql)->result_array();
-
+            //查询小号
             $sex = "";
             if ($add_check['sex'] == "女") {
                 $sex = "男";
-            } else if ($add_check['sex'] = "男") {
+            } else {
                 $sex = "女";
             }
-            $data = array();
-            foreach ($check as $item => $value) {
-
-                $l = in_array($sex, $value, TRUE);
-                if ($l) {
-                    $data[] = $value;
+            $local = $this->db->select('*')->where('sex =', $sex)->get('local')->result_array();
+            if ($check_user['login_time'] <= time()) {
+                //----------------↓好友主动推送↓--------------//
+                $row = $this->MyChat($check_user['userid']);
+                $sql = " SELECT u.member,u.nickname,us.age,us.sex,u.userid FROM rem_user AS u LEFT JOIN rem_userdata AS us ON u.nickname = us.nickname WHERE member = '1' AND age >= {$add_check['age']} AND age <= {$add_check['age']}+10";
+                $check = $this->db->query($sql)->result_array();
+                $data = array();
+                foreach ($check as $item => $value) {
+                    $l = in_array($sex, $value, TRUE);
+                    if ($l) {
+                        $data[] = $value;
+                    }
                 }
-            }
-            $num = "";
-            if (!empty($data)) {
-                $x = @array_rand($data, 1);
-                if (empty($row) AND $data[$x]['userid'] != '148125000229772') {
-                    @$num = $data[$x]['userid'];
+                $num = "";
+                if (!empty($data)) {
+                    $x = @array_rand($data, 1);
+                    if (empty($row) AND $data[$x]['userid'] != '148125000229772') {
+                        @$num = $data[$x]['userid'];
+                    }
                 }
+                //------------------------------------------//
+                $this->db->where("$where =", $this->nickname)->update('user', array('login_time' => 3600 * 24 * 1 + time()));
             }
-            //------------------------------------------//
-            $result = array(
+            $result = [
                 'status' => 'success',
+                'membergrade' => $add_check['membergrade'],
+                'grade' => $add_check['grade'],
                 'id' => $check_user['id'],
                 'username' => $check_user['username'],
                 'userid' => $check_user['userid'],
@@ -182,13 +197,15 @@ class Member extends CI_Controller
                 'token' => $check_user['token'],
                 'add_time' => $check_user['add_time'],
                 'pushid' => isset($num) ? $num : NULL,
-                'data_json' => isset($add_check['data_json']) ? $add_check['data_json'] : NULL
-            );
+                'data_json' => isset($add_check['data_json']) ? $add_check['data_json'] : NULL,
+                'trumpet' => json_encode($local, JSON_UNESCAPED_UNICODE),
 
-            print json_encode($result, JSON_UNESCAPED_UNICODE);
+            ];
+
+            echo json_encode($result, JSON_UNESCAPED_UNICODE);
         } else {
             $result['status'] = "error";
-            print json_encode($result);
+            echo json_encode($result);
         }
     }
 
@@ -221,10 +238,11 @@ class Member extends CI_Controller
                 $luck = "0";
             }
 
-            $where = "u.id,u.username,u.userid,u.nickname,u.autstate,u.photo,us.wechat,us.qq,us.sex,us.height,us.weight,us.education,us.constellation,us.birthday,us.occupation,us.working,us.income,us.housing,us.kid,us.child,us.province,us.place,us.car,us.alcohol,us.smoke,us.shape,us.nation,us.marry,us.marriage,us.monologue";
+            $where = "u.id,u.username,u.userid,u.nickname,u.autstate,u.photo,u.member,us.wechat,us.qq,us.sex,us.height,us.weight,us.education,us.constellation,us.birthday,us.occupation,us.working,us.income,us.housing,us.kid,us.child,us.province,us.place,us.car,us.alcohol,us.smoke,us.shape,us.nation,us.marry,us.marriage,us.monologue,g.membergrade,g.grade";
             $check_info = $this->db->select($where)
                 ->from('user as u')
                 ->join('userdata as us', 'u.nickname = us.nickname', 'left')
+                ->join('grade AS g', 'u.nickname = g.nickname', 'left')
                 ->where('u.nickname', $member)
                 ->get('user')
                 ->row_array();

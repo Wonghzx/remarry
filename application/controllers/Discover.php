@@ -35,11 +35,12 @@ class Discover extends CI_Controller
             //$where = join(' AND ',$where);
 
             $hash = $this->geohash->encode($lat, $lng);
-            $prefix = substr($hash, 0, 4);//截取我的经纬度前面六位
+            $prefix = substr($hash, 0, 1);//截取我的经纬度前面六位
             $neighbors = $this->geohash->neighbors($prefix);//取出相邻八个区域
             array_push($neighbors, $prefix);
             $data = array();
 
+//            @file_put_contents('./log.log', json_encode($neighbors, JSON_UNESCAPED_UNICODE), FILE_APPEND);
             foreach ($neighbors as $key => $val) {
                 $sql = " SELECT us.sex,us.nickname,u.photo,us.lng,us.lat FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname {$where[0]}  latitude LIKE '{$val}%' AND us.status = '1' ";
                 $check = $this->db->query($sql)->result_array();
