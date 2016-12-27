@@ -66,5 +66,12 @@ class Alipay extends CI_Controller
 
     }
 
+  /*
+   * 芝麻
+   */
+    public function zmCredit()
+    {
+        @file_put_contents('./log.txt', json_encode($_REQUEST, JSON_UNESCAPED_UNICODE) . PHP_EOL, FILE_APPEND);
+    }
 
 }

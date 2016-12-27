@@ -29,12 +29,22 @@ class Authentication extends CI_Controller
             if ($add) {
                 $result['status'] = "success";
                 print json_encode($result);
-                $this->db->where('nickname',$nickname)->update('user',array('autstate'=>"2"));
+                $this->db->where('nickname', $nickname)->update('user', array('autstate' => "2"));
             } else {
                 $result['status'] = "error";
                 print json_encode($result);
             }
         }
+    }
 
+    /**
+     * 身份认证
+     * Certifying
+     * @param 2016/11/25
+     * @param 9:35
+     */
+    public function Sesame()
+    {
+       echo $url = "https://openapi.alipay.com/gateway.do";
     }
 }

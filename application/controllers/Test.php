@@ -11,14 +11,16 @@ class Test extends CI_Controller
         $this->tarname = '148075130997598';
         $this->nickname = "148109329079888";
 //        $this->sex = $this->input->post('sex', TRUE);
+        $this->load->model('Common_Models');
     }
 
     public function index()
     {
-        $this->load->model('Grade_Models');
-        $a = $this->Grade_Models->gradeQuery('George.W');
-        p($a);
+//        $sql = " SELECT id,sponsor,activitytitle,introduction,activitytype,poster,city,actposition,starttime,endtime,stoptime,lng,lat,state,add_time FROM rem_activity WHERE latitude LIKE '{$this->nickname}%' ORDER BY add_time DESC";
+//        $check_info = $this->db->query($sql)->result_array();
 
+        $check = $this->Common_Models->getDataAll('participant', 'nickname,actid',array('nickname'=> 1));
+        p($check);
     }
 
 }

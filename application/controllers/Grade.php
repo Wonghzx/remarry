@@ -38,11 +38,11 @@ class Grade extends CI_Controller
 
         $this->checkMember = $this->Grade_Models->gradeQuery($this->nickname);
 
-        if ( date('j') >= date('j', $this->checkMember['add_time'])) {
+        if (date('j') >= date('j', $this->checkMember['add_time'])) {
             if (!empty($this->checkMember)) {
 
                 //status时间戳小于现在时间戳执行以下代码
-                if (date('j',$this->checkMember['status']) <= date('j')) {
+                if (date('j', $this->checkMember['status']) <= date('j')) {
                     if ((int)$this->checkMember['member'] == 1) {
                         $data = array(
                             'memberintegral' => $this->checkMember['memberintegral'] + 8,

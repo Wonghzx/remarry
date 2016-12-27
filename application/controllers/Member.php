@@ -16,7 +16,7 @@ class Member extends CI_Controller
     {
         parent::__construct();
         $this->username = trim($this->input->post('username', TRUE));
-        $this->password = trim($this->input->post('password', TRUE));
+        $this->password = md5(trim($this->input->post('password', TRUE)));
         $this->nickname = trim($this->input->post('nickname', TRUE));
         $this->tarname = $this->input->post('tarname', TRUE);
 //        $this->token = trim($this->input->post('token', TRUE));
@@ -63,9 +63,9 @@ class Member extends CI_Controller
                         $token = $obj->token;
                         $Seven = 3600 * 24 * 3;  //5天会员
                         $data = array(
-                            'username' => trim($this->username),
-                            'password' => trim($this->password),
-                            'nickname' => trim($this->nickname),
+                            'username' => $this->username,
+                            'password' => $this->password,
+                            'nickname' => $this->nickname,
                             'userid' => $this->time . $new_str,
                             'photo' => "http://119.29.143.48/moren/moren.jpg",
                             'member' => "1", //默认1   送3天会员
@@ -160,7 +160,7 @@ class Member extends CI_Controller
             if ($check_user['login_time'] <= time()) {
                 //----------------↓好友主动推送↓--------------//
                 $row = $this->MyChat($check_user['userid']);
-                $sql = " SELECT u.member,u.nickname,us.age,us.sex,u.userid FROM rem_user AS u LEFT JOIN rem_userdata AS us ON u.nickname = us.nickname WHERE member = '1' AND age >= {$add_check['age']} AND age <= {$add_check['age']}+10";
+                $sql = " SELECT u.member,u.nickname,us.age,us.sex,u.userid FROM rem_user AS u LEFT JOIN rem_userdata AS us ON u.nickname = us.nickname WHERE member = '1' AND age >= {$add_check['age']} AND age <= {$add_check['age']}+10 AND status = '1' ";
                 $check = $this->db->query($sql)->result_array();
                 $data = array();
                 foreach ($check as $item => $value) {
@@ -172,9 +172,9 @@ class Member extends CI_Controller
                 $num = "";
                 if (!empty($data)) {
                     $x = @array_rand($data, 1);
-                    if (empty($row) AND $data[$x]['userid'] != '148125000229772') {
+//                    if (empty($row) AND $data[$x]['userid'] != '148125000229772' ) {
                         @$num = $data[$x]['userid'];
-                    }
+//                    }
                 }
                 //------------------------------------------//
                 $this->db->where("$where =", $this->nickname)->update('user', array('login_time' => 3600 * 24 * 1 + time()));

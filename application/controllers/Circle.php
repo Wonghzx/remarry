@@ -21,6 +21,7 @@ class Circle extends CI_Controller
             'password' => 'huangzhixue123',
             'charset' => 'utf8',
         ]);
+        $this->load->model('Common_Models');
     }
 
     /**
@@ -286,7 +287,7 @@ class Circle extends CI_Controller
                 'circleid' => $id,
                 'add_time' => time()
             );
-            $this->db->insert('like', $data);
+            $this->Common_Models->insertData('like', $data);
         }
     }
 

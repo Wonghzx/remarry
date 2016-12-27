@@ -14,6 +14,8 @@ class Activity extends CI_Controller
         parent::__construct();
         $this->sponsor = $this->input->post('sponsor', TRUE);//nickname 主办方
         $this->geohash = new Geohash();
+        $this->load->model('Common_Models');
+        $this->load->model('Activity_Models');
     }
 
     /**
@@ -45,8 +47,9 @@ class Activity extends CI_Controller
                     'latitude' => $this->geohash->encode($this->input->post('lat', TRUE), $this->input->post('lng', TRUE)),//维度
                     'add_time' => time()
                 );
-                $add_info = $this->db->insert('activity', $data);
-                if ($add_info) {
+
+                $add_info = $this->Common_Models->insertData('activity', $data);
+                if ($add_info == "success") {
                     $result['status'] = "success";
                     print json_encode($result);
                     $this->load->model('Grade_Models');
@@ -61,8 +64,8 @@ class Activity extends CI_Controller
                             'integral' => $grade['integral'] + 1
                         );
                     }
-                     $this->db->where('nickname =', $this->sponsor)
-                        ->update('grade', $data);
+
+                    $this->Common_Models->updateData(array('nickname' => $this->sponsor), 'grade', $data);
                 } else {
                     $result['status'] = "error";
                     print json_encode($result);
@@ -91,13 +94,15 @@ class Activity extends CI_Controller
             array_push($neighbors, $prefix);
 
             $data = array();
-            $sql = " SELECT nickname,actid FROM rem_participant ";
-            $check = $this->db->query($sql)->result_array();
+//            $sql = " SELECT nickname,actid FROM rem_participant ";
+//            $check = $this->db->query($sql)->result_array();
+            $check = $this->Common_Models->getDataAll('participant', 'nickname,actid');
 
             foreach ($neighbors as $key => $value) {
 
-                $sql = " SELECT id,sponsor,activitytitle,introduction,activitytype,poster,city,actposition,starttime,endtime,stoptime,lng,lat,state,add_time FROM rem_activity WHERE latitude LIKE '{$value}%' ORDER BY add_time DESC";
-                $check_info = $this->db->query($sql)->result_array();
+//                $sql = " SELECT id,sponsor,activitytitle,introduction,activitytype,poster,city,actposition,starttime,endtime,stoptime,lng,lat,state,add_time FROM rem_activity WHERE latitude LIKE '{$value}%' ORDER BY add_time DESC";
+//                $check_info = $this->db->query($sql)->result_array();
+                $check_info = $this->Activity_Models->queryActivity($value);
                 foreach ($check_info as $item => $va) {
 
                     $data[] = $va;
@@ -112,16 +117,22 @@ class Activity extends CI_Controller
                     }
                     //↓时间活动时间到期
                     if (time() > $va['endtime']) {
-                        $this->db->where('endtime', $va['endtime'])->update('activity', array('state' => "0"));
+//                        $this->db->where('endtime', $va['endtime'])->update('activity', array('state' => "0"));
+                        $this->Common_Models->updateData(array('endtime' => $va['endtime']), 'activity', array('state' => "0"));
                     }
-                    $t = 3600 * 24 * 7 + $va['endtime'];//活动时间到期7天自动删除
+                    $t = 3600 * 24 * 1 + $va['endtime'];//活动时间到期7天自动删除
                     if (time() == $t || time() > $t) {
-                        $id = $this->db->select('id')->where('state =', "0")->get('activity')->result_array();
+//                        $id = $this->db->select('id')->where('state =', "0")->get('activity')->result_array();
+                        $id = $this->Common_Models->getDataAll('activity', 'id', array('state' => "0"));
                         //查出活动到期7天后删除
                         foreach ($id as &$val) {
-                            $this->db->delete('participant', array('actid' => $val['id']));
+//                            $this->db->delete('participant', array('actid' => $val['id']));
+                            $this->Common_Models->deleteData('participant', array('actid' => $val['id']));
+                            $Photo = substr($val['poster'], 29);
+                            @$DelPhoto = unlink('./' . $Photo);
                         }
-                        $this->db->where('endtime', $va['endtime'])->delete('activity', array('state' => "0"));
+//                        $this->db->where('endtime', $va['endtime'])->delete('activity', array('state' => ));
+                        $this->Common_Models->deleteData('activity', array('state' => "0"), array('endtime' => $va['endtime']));
 
                     }
 
