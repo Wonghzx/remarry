@@ -49,21 +49,20 @@ class Upload extends CI_Controller
     {
         $target_path = "Apk/";//接收文件目录
 
-
-        $date = date('Ymdhis');//得到当前时间,如;20070705163148
         @$fileName = $_FILES['ApkFile']['name'];//得到上传文件的名字
-        $name = explode('.', $fileName);//将文件名以'.'分割得到后缀名,得到一个数组
-        @$newPath = $date . '.' . $name[1];//得到一个新的文件为'20070705163148.jpg',即新的路径
-        $target_path = $target_path . $newPath;
+        $target_path = $target_path . $fileName;
 
 
         if (@move_uploaded_file($_FILES['ApkFile']['tmp_name'], $target_path)) {
+            $url = $this->Common_Models->getDataOne('version', 'url', array('id' => 1));
+            $url_p = substr($url, 15);
+            @unlink('./' . $url_p);
             $data = array(
                 'versionname' => $this->input->post('versionname', TRUE),
                 'content' => $this->input->post('content', TRUE),
-                'url' => "http://119.29.143.48/remarry/".$target_path
+                'url' => "http://da.cntywl.com/Apk/" . $target_path
             );
-                $add = $this->db->insert('version',$data);
+            $add = $this->Common_Models->insertData('version', $data);
             if ($add > 0) {
                 echo "上传成功";
             } else {
@@ -75,5 +74,11 @@ class Upload extends CI_Controller
         }
 
         $this->load->view('index');
+    }
+
+    public function uploadApk()
+    {
+
+        $this->load->view('uploadApk');
     }
 }

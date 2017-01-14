@@ -4,9 +4,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Modify extends CI_Controller
 {
 
-   /*
-    * 修改密码
-    */
+    /*
+     * 修改密码
+     */
     public function index()
     {
         $nickname = $this->input->post('nickname', TRUE);
@@ -15,13 +15,14 @@ class Modify extends CI_Controller
             $data = array(
                 'password' => $password
             );
-            $update = $this->db->where('nickname =', $nickname)->update('user', $data);
+
+            $update = $this->Common_Models->updateData(array('nickname' => $nickname), 'user', $data);
             if ($update) {
                 $result['status'] = "success";
-                print json_encode($result);
+                echo json_encode($result);
             } else {
                 $result['status'] = "error";
-                print json_encode($result);
+                echo json_encode($result);
             }
         }
     }

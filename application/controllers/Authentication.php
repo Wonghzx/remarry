@@ -25,14 +25,14 @@ class Authentication extends CI_Controller
                 'photo' => $photo,
                 'add_time' => time()
             );
-            $add = $this->db->insert('authentication', $data);
+            $add = $this->Common_Models->insertData('authentication', $data);
             if ($add) {
                 $result['status'] = "success";
-                print json_encode($result);
-                $this->db->where('nickname', $nickname)->update('user', array('autstate' => "2"));
+                echo json_encode($result);
+                $this->Common_Models->updateData(array('nickname' => $nickname), 'user', array('autstate' => "2"));
             } else {
                 $result['status'] = "error";
-                print json_encode($result);
+                echo json_encode($result);
             }
         }
     }
@@ -45,6 +45,6 @@ class Authentication extends CI_Controller
      */
     public function Sesame()
     {
-       echo $url = "https://openapi.alipay.com/gateway.do";
+        echo $url = "https://openapi.alipay.com/gateway.do";
     }
 }

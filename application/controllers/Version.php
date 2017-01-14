@@ -6,11 +6,7 @@ class Version extends CI_Controller
 
     public function VersionC()
     {
-        $check = $this->db->select('versionname,versioncode,content,url')
-            ->order_by('versioncode', 'DESC')
-            ->limit(1)
-            ->get('version')
-            ->row_array();
-        print json_encode($check, JSON_UNESCAPED_UNICODE);
+        $check = $this->Common_Models->queryVersion();
+        echo json_encode($check, JSON_UNESCAPED_UNICODE);
     }
 }

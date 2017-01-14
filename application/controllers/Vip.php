@@ -63,7 +63,7 @@ class Vip extends CI_Controller
             if (empty($this->nickname))
                 throw new Exception('您称不能为空');
 
-            $check = $this->db->select('memtime')->where('nickname =', $this->nickname)->get('user')->row_array();
+            $check = $this->Common_Models->getDataOne('user', 'memtime', array('nickname' => $this->nickname));
             if (empty($check))
                 throw new Exception('请求失败');
 
@@ -75,8 +75,10 @@ class Vip extends CI_Controller
                 } else {
                     $day = floor(3600 * 24 * $num + $vipTime);
                 }
-                $update = $this->db->where('nickname =', $this->nickname)->update('user', array('memtime' => $day, 'member' => "1", 'uptime' => time()));
-                if ($update) {
+                $data = array('memtime' => $day, 'member' => "1", 'uptime' => time());
+
+                $update = $this->Common_Models->updateData(array('nickname' => $this->nickname), 'user', $data);
+                if ($update == "success") {
                     $result['memtime'] = $day;
                     $result['status'] = "success";
                     echo json_encode($result);
@@ -100,10 +102,17 @@ class Vip extends CI_Controller
     {
         $ordernumber = $this->input->post('ordernumber', TRUE);
         if (!empty($this->nickname)) {
-            $check = $this->db->where('nickname =', $this->nickname)->get('failedvip')->row_array();
+
+            $check = $this->Common_Models->getDataOne('failedvip', false, array('nickname' => $this->nickname), false);
             if ($check == "") {
-                $add = $this->db->insert('failedvip', array('nickname' => $this->nickname, 'ordernumber' => $ordernumber, 'add_time' => time()));
-                if ($add) {
+                $data = array(
+                    'nickname' => $this->nickname,
+                    'ordernumber' => $ordernumber,
+                    'add_time' => time()
+                );
+
+                $add = $this->Common_Models->insertData('failedvip',$data);
+                if ($add == "success") {
                     $result['status'] = 'success';
                     echo json_encode($result);
                 } else {

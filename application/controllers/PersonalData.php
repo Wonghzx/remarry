@@ -4,6 +4,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class PersonalData extends CI_Controller
 {
 
+    private $nickname;
+
     /*
      * PersonalData constructor.
      */
@@ -19,7 +21,7 @@ class PersonalData extends CI_Controller
             'password' => 'huangzhixue123',
             'charset' => 'utf8',
         ]);
-        session_start();
+        $this->load->model('PersonalData_Models');
     }
 
     /**
@@ -119,15 +121,14 @@ class PersonalData extends CI_Controller
     public function CheckUserMate()
     {
         if (!empty($this->input->post())) {
-            $check_info = $this->db->select('age,height,education,weight,working,income,kid,child,alcohol,shape,marriage')
-                ->where('nickname', $this->nickname)
-                ->get('mymates')
-                ->row_array();
+
+            $sql = "age,height,education,weight,working,income,kid,child,alcohol,shape,marriage";
+            $check_info = $this->Common_Models->getDataOne('mymates', $sql, array('nickname' => $this->nickname));
             if ($check_info) {
-                print json_encode($check_info);
+                echo json_encode($check_info);
             } else {
                 $result['status'] = "error";
-                print json_encode($result);
+                echo json_encode($result);
             }
         }
     }
@@ -143,19 +144,17 @@ class PersonalData extends CI_Controller
         $photo = $this->input->post('url', TRUE);
 
         if (!empty($photo)) {
-            $PhotoUlr = $this->db->select("photo")
-                ->where('nickname =', $this->nickname)
-                ->get('user')
-                ->row_array();
-            $Photo = substr($PhotoUlr['photo'], 29);
+
+            $PhotoUlr = $this->Common_Models->getDataOne('user', 'photo', array('nickname' => $this->nickname));
+            $Photo = substr($PhotoUlr['photo'], 21);
             @$DelPhoto = unlink('./' . $Photo);
 
             $data = array(
                 'photo' => $photo
             );
-            $UpdatePhoto = $this->db->where('nickname =', $this->nickname)
-                ->update('user', $data);
-            if ($UpdatePhoto) {
+
+            $UpdatePhoto = $this->Common_Models->updateData(array('nickname' => $this->nickname), 'user', $data);
+            if ($UpdatePhoto == "success") {
                 $result['status'] = "success";
                 echo json_encode($result);
             } else {
@@ -174,6 +173,7 @@ class PersonalData extends CI_Controller
      */
     public function AddUserPhoto()
     {
+        $add_photo = null;
         $photo = $this->input->post('photourl', TRUE);
         $photo_url = explode(',', $photo);
         foreach ($photo_url as $key => $item) {
@@ -183,15 +183,15 @@ class PersonalData extends CI_Controller
                     'photourl' => $item,
                     'add_time' => time()
                 );
-                $add_photo = $this->db->insert('useralbum', $data);
+                $add_photo = $this->Common_Models->insertData('useralbum', $data);
             }
         }
-        if (@$add_photo > 0) {
+        if ($add_photo == "success") {
             $result['status'] = 'success';
-            print json_encode($result);
+            echo json_encode($result);
         } else {
             $result['status'] = 'error';
-            print json_encode($result);
+            echo json_encode($result);
         }
     }
 
@@ -208,15 +208,15 @@ class PersonalData extends CI_Controller
             $data = array(
                 'photourl' => $url
             );
-            $del = $this->db->where('nickname =', $this->nickname)->delete('useralbum', $data);
-            if ($del) {
-                $Photo = substr($url, 29);
-                @unlink('./' . $Photo);
+            $del = $this->Common_Models->deleteData('useralbum', $data, array('nickname' => $this->nickname));
+            $Photo = substr($url, 21);
+            @unlink('./' . $Photo);
+            if ($del == "success") {
                 $result['status'] = 'success';
-                print json_encode($result);
+                echo json_encode($result);
             } else {
                 $result['status'] = 'error';
-                print json_encode($result);
+                echo json_encode($result);
             }
         }
     }
@@ -239,9 +239,9 @@ class PersonalData extends CI_Controller
             } else {
                 $row = "nickname";
             }
-            $check_photo = $this->db->select('photo')->where($row, $this->nickname)->get('user')->row_array();
+            $check_photo = $this->Common_Models->getDataOne('user', 'photo', array($row => $this->nickname));
             if (is_array($check_photo)) {
-                print json_encode($check_photo);
+                echo json_encode($check_photo);
             } else {
                 $result['status'] = NULL;
             }
@@ -258,20 +258,14 @@ class PersonalData extends CI_Controller
      */
     public function MyChat()
     {
-        $userid = $this->input->post('userid', TRUE);
-        $targetid = $this->input->post('targetid', TRUE);
-
-      $sql = " SELECT id FROM rem_mychat WHERE nickname IN ('{$userid}','{$targetid}') AND  targetname IN ('{$userid}','{$targetid}') ";
-        $check_user = $this->db->query($sql)->row_array();
+        $userId = $this->input->post('userid', TRUE);
+        $targetId = $this->input->post('targetid', TRUE);
+        $check_user = $this->PersonalData_Models->MyChat($userId, $targetId);
         if (empty($check_user)) {
-            $add = $this->db->insert('mychat', array('nickname' => $userid, 'targetname' => $targetid, 'add_time' => time()));
+            $add = $this->Common_Models->insertData('mychat',array('nickname' => $userId, 'targetname' => $targetId, 'add_time' => time()));
             if ($add) {
-                $check = $this->db->select('targetname')->where('nickname =', $userid)->get('mychat')->result_array();
-                $json = json_encode($check);
-                session('json', $json);
-                @file_put_contents('./log.log', session('json'), FILE_APPEND);
                 $result['status'] = "success";
-                print json_encode($result);
+                echo json_encode($result);
             }
         }
     }

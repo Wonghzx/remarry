@@ -13,6 +13,7 @@ class Circle extends CI_Controller
     {
         parent::__construct();
         $this->nickname = $this->input->post('nickname', TRUE);
+        $this->load->model('Circle_Models');
         $this->conn = new medoo([
             'database_type' => 'mysql',
             'database_name' => 'remarry',
@@ -21,7 +22,7 @@ class Circle extends CI_Controller
             'password' => 'huangzhixue123',
             'charset' => 'utf8',
         ]);
-        $this->load->model('Common_Models');
+
     }
 
     /**
@@ -43,10 +44,10 @@ class Circle extends CI_Controller
             ]);
             if ($add_info > 0) {
                 $result['status'] = "success";
-                print json_encode($result);
+                echo json_encode($result);
             } else {
                 $result['status'] = "error";
-                print json_encode($result);
+                echo json_encode($result);
             }
         }
     }
@@ -67,23 +68,32 @@ class Circle extends CI_Controller
                 'add_time' => time()
             );
             if (!in_array('', $data)) {
-                $add_info = $this->db->insert('circle_comment', $data);
+                $add_info = $this->Common_Models->insertData('circle_comment', $data);
                 $id = $this->db->insert_id();
-                if ($add_info > 0 AND $id > 0) {
+                if ($add_info == "success" AND $id > 0) {
+
                     $result['status'] = "success";
                     $result['id'] = (string)$id;
-                    print json_encode($result);
-                    $member = $this->db->select('member')->where('nickname =', $this->nickname)->get('user')->row_array();
-                    if ((int)$member == 1) {
-                        $sql = "UPDATE rem_grade SET memberintegral = memberintegral+1,integral = integral+1 WHERE nickname = '$this->nickname'";
+                    echo json_encode($result);
+
+                    $this->load->model('Grade_Models');
+                    $grade = $this->Grade_Models->gradeQuery($this->nickname);
+
+                    if ((int)$grade['member'] == 1) {
+                        $data = array(
+                            'memberintegral' => $grade['memberintegral'] + 1,
+                            'integral' => $grade['integral'] + 1
+                        );
                     } else {
-                        $sql = "UPDATE rem_grade SET integral = integral+1 WHERE nickname = '$this->nickname'";
+                        $data = array(
+                            'integral' => $grade['integral'] + 1
+                        );
                     }
-                    $this->db->query($sql);
+                    $this->Common_Models->updateData(array('nickname' => $this->nickname), 'grade', $data);
 
                 } else {
                     $result['status'] = "error";
-                    print json_encode($result);
+                    echo json_encode($result);
                 }
             }
         }
@@ -106,13 +116,13 @@ class Circle extends CI_Controller
                 'circleid' => $this->input->post('circleid', TRUE),//朋友圈ID
                 'add_time' => time()
             );
-            $add_info = $this->db->insert('circle_reply', $data);
-            if ($add_info > 0) {
+            $add_info = $this->Common_Models->insertData('circle_reply', $data);
+            if ($add_info == "success") {
                 $result['status'] = "success";
-                print json_encode($result);
+                echo json_encode($result);
             } else {
                 $result['status'] = "error";
-                print json_encode($result);
+                echo json_encode($result);
             }
         }
     }
@@ -130,22 +140,14 @@ class Circle extends CI_Controller
         $num = ($page - 1) * $limit;
         try {
             $this->db->cache_on();
-            $sql = " SELECT c.id,c.nickname,u.userid,c.location,u.photo,c.content,c.photourl,c.add_time FROM rem_circle AS c LEFT JOIN rem_user AS u ON c.nickname = u.nickname  ORDER BY c.add_time DESC LIMIT {$num},{$limit} ";//
-            $check_info = $this->db->query($sql)->result_array();//生活圈信息
 
+            $check_info = $this->Circle_Models->queryCircle($num, $limit);//生活圈信息
 
-            $sql = " SELECT c.id,c.nickname,u.userid,u.photo,c.content,c.circleid,c.add_time FROM rem_circle_comment AS c LEFT JOIN rem_user AS u ON c.nickname = u.nickname ";
-            $check_comment = $this->db->query($sql)->result_array();//评论信息
+            $check_comment = $this->Circle_Models->queryCircleComment();//评论信息
 
+            $check_reply = $this->Circle_Models->queryCircleReply();//评论回复信息
 
-            $sql = " SELECT r.id,r.nickname,u.userid,r.targetname,r.content,r.commentid FROM rem_circle_reply AS r LEFT JOIN rem_user AS u ON r.nickname = u.nickname";
-            $check_reply = $this->db->query($sql)->result_array();//评论信息
-
-            $check_like = $this->db->select('nickname,circleid,add_time')
-                ->order_by('add_time', 'ASC')
-                ->get('like')
-                ->result_array();//点赞
-
+            $check_like = $this->Circle_Models->queryCircleLike();//评论回复信息
 
             //----------------↓循环嵌套评论回复↓--------------//
             foreach ($check_comment as $item => $value) {
@@ -176,7 +178,6 @@ class Circle extends CI_Controller
             }
             //------------------------------------------//
             if (!empty($check_info)) {
-//                p($check_info);
                 echo json_encode($check_info, JSON_UNESCAPED_UNICODE);
             }
             $this->db->cache_off();
@@ -197,21 +198,15 @@ class Circle extends CI_Controller
         if (!empty($this->input->post())) {
             try {
 
-                $sql = " SELECT c.id,c.nickname,u.userid,u.member,c.location,u.photo,us.age,us.height,c.content,c.photourl,c.add_time FROM rem_circle AS c LEFT JOIN rem_user AS u ON c.nickname = u.nickname LEFT JOIN rem_userdata AS us ON c.nickname = us.nickname WHERE c.id = {$id}";
-                $check_info = $this->db->query($sql)->row_array();//生活圈信息
 
+                $check_info = $this->Circle_Models->queryCircle(null, null, $id);//生活圈信息
 
-                $sql = " SELECT c.id,c.nickname,us.nowlocal,u.userid,u.photo,c.content,c.circleid,c.add_time FROM rem_circle_comment AS c LEFT JOIN rem_user AS u ON c.nickname = u.nickname LEFT JOIN rem_userdata AS us ON c.nickname = us.nickname WHERE c.circleid = {$id} ";
-                $check_comment = $this->db->query($sql)->result_array();//评论信息
+                $check_comment = $this->Circle_Models->queryCircleComment($id);//评论信息
 
-                $sql = " SELECT r.id,r.nickname,u.userid,r.targetname,r.content,r.commentid FROM rem_circle_reply AS r LEFT JOIN rem_user AS u ON r.targetname = u.nickname";
-                $check_reply = $this->db->query($sql)->result_array();//回复评论信息
+                $check_reply = $this->Circle_Models->queryCircleReply($id);//评论回复信息
 
-                $check_like = $this->db->select('nickname,add_time')
-                    ->where('circleid', $id)
-                    ->order_by('add_time', 'ASC')
-                    ->get('like')
-                    ->result_array();//点赞
+                $check_like = $this->Circle_Models->queryCircleLike($id);//评论回复信息
+
                 $check_likes = array_column($check_like, 'nickname');
                 foreach ($check_comment as $item => $value) {
                     $row = array();
@@ -244,20 +239,20 @@ class Circle extends CI_Controller
     public function DelCircle()
     {
         $id = (int)$this->input->post('id', TRUE);
-        $photo_url = $this->db->select('photourl')->where('id', $id)->get('circle')->row_array();
+        $photo_url = $this->Common_Models->getDataOne('circle', 'photourl', array('id' => $id));
         $url = explode(',', $photo_url['photourl']);
         foreach ($url as $item => $value) {
-            $url_p = substr($value, 29);
+            $url_p = substr($value, 21);
             @unlink('./' . $url_p);
         }
         if (!empty($id)) {
-            $delCir = $this->db->delete('circle', array('id' => $id));
+            $delCir = $this->Common_Models->deleteData('circle', array('id' => $id));
             if ($delCir) {
-                $delComm = $this->db->delete('circle_comment', array('circleid' => $id));
+                $delComm = $this->Common_Models->deleteData('circle_comment', array('circleid' => $id));
                 if ($delComm) {
-                    $delReply = $this->db->delete('circle_reply', array('circleid' => $id));
+                    $delReply = $this->Common_Models->deleteData('circle_reply', array('circleid' => $id));
                     if ($delReply) {
-                        $delLike = $this->db->delete('like', array('circleid' => $id));
+                        $delLike = $this->Common_Models->deleteData('like', array('circleid' => $id));
                         if ($delLike) {
                             $result['status'] = "success";
                             echo json_encode($result);
@@ -303,7 +298,7 @@ class Circle extends CI_Controller
     {
         $id = $this->input->post('id', TRUE);
         if (!empty($this->input->post())) {
-            $win = $this->db->where('nickname ', $this->nickname)->delete('like', array('circleid' => $id));
+            $win = $this->Common_Models->deleteData('like', array('circleid' => $id), array('nickname' => $this->nickname));
             if ($win) {
                 $result['status'] = "success";
                 echo json_encode($result);

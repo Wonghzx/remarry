@@ -51,5 +51,26 @@ class Activity_Models extends CI_Model
         }
 
     }
+
+    /**
+     * 单个活动信息
+     * @param queryActivityOne
+     * @param 2016/11/15
+     * @param 15:12
+     */
+    public function queryActivityOne($where)
+    {
+        if (!empty((int)$where)) {
+            $queryOne = $this->db->select('p.id,p.nickname,u.photo')
+                ->from('participant AS p')
+                ->join('user AS u', 'p.nickname=u.nickname', 'left')
+                ->where('p.actid', $where)
+                ->get('participant')
+                ->result_array();
+            return $queryOne;
+        } else {
+            return false;
+        }
+    }
 }
 

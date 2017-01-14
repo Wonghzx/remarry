@@ -14,7 +14,6 @@ class Activity extends CI_Controller
         parent::__construct();
         $this->sponsor = $this->input->post('sponsor', TRUE);//nickname 主办方
         $this->geohash = new Geohash();
-        $this->load->model('Common_Models');
         $this->load->model('Activity_Models');
     }
 
@@ -51,7 +50,7 @@ class Activity extends CI_Controller
                 $add_info = $this->Common_Models->insertData('activity', $data);
                 if ($add_info == "success") {
                     $result['status'] = "success";
-                    print json_encode($result);
+                    echo json_encode($result);
                     $this->load->model('Grade_Models');
                     $grade = $this->Grade_Models->gradeQuery($this->sponsor);
                     if ((int)$grade['member'] == 1) {
@@ -68,11 +67,11 @@ class Activity extends CI_Controller
                     $this->Common_Models->updateData(array('nickname' => $this->sponsor), 'grade', $data);
                 } else {
                     $result['status'] = "error";
-                    print json_encode($result);
+                    echo json_encode($result);
                 }
             }
         } catch (Exception $e) {
-            print $e->getMessage();
+            echo $e->getMessage();
         }
     }
 
@@ -94,15 +93,12 @@ class Activity extends CI_Controller
             array_push($neighbors, $prefix);
 
             $data = array();
-//            $sql = " SELECT nickname,actid FROM rem_participant ";
-//            $check = $this->db->query($sql)->result_array();
-            $check = $this->Common_Models->getDataAll('participant', 'nickname,actid');
+
+            $check = $this->Common_Models->getDataAll('participant', 'nickname,actid');//查询出参与活动人
 
             foreach ($neighbors as $key => $value) {
 
-//                $sql = " SELECT id,sponsor,activitytitle,introduction,activitytype,poster,city,actposition,starttime,endtime,stoptime,lng,lat,state,add_time FROM rem_activity WHERE latitude LIKE '{$value}%' ORDER BY add_time DESC";
-//                $check_info = $this->db->query($sql)->result_array();
-                $check_info = $this->Activity_Models->queryActivity($value);
+                $check_info = $this->Activity_Models->queryActivity($value);//查询出附近的活动信息
                 foreach ($check_info as $item => $va) {
 
                     $data[] = $va;
@@ -117,21 +113,17 @@ class Activity extends CI_Controller
                     }
                     //↓时间活动时间到期
                     if (time() > $va['endtime']) {
-//                        $this->db->where('endtime', $va['endtime'])->update('activity', array('state' => "0"));
                         $this->Common_Models->updateData(array('endtime' => $va['endtime']), 'activity', array('state' => "0"));
                     }
-                    $t = 3600 * 24 * 1 + $va['endtime'];//活动时间到期7天自动删除
+                    $t = 3600 * 24 * 7 + $va['endtime'];//活动时间到期7天自动删除
                     if (time() == $t || time() > $t) {
-//                        $id = $this->db->select('id')->where('state =', "0")->get('activity')->result_array();
                         $id = $this->Common_Models->getDataAll('activity', 'id', array('state' => "0"));
                         //查出活动到期7天后删除
                         foreach ($id as &$val) {
-//                            $this->db->delete('participant', array('actid' => $val['id']));
                             $this->Common_Models->deleteData('participant', array('actid' => $val['id']));
-                            $Photo = substr($val['poster'], 29);
+                            $Photo = substr($val['poster'], 21);
                             @$DelPhoto = unlink('./' . $Photo);
                         }
-//                        $this->db->where('endtime', $va['endtime'])->delete('activity', array('state' => ));
                         $this->Common_Models->deleteData('activity', array('state' => "0"), array('endtime' => $va['endtime']));
 
                     }
@@ -139,7 +131,7 @@ class Activity extends CI_Controller
                 }
             }
             if (!empty($data)) {
-                print json_encode($data, JSON_UNESCAPED_UNICODE);
+                echo json_encode($data, JSON_UNESCAPED_UNICODE);
             }
         }
 
@@ -156,20 +148,16 @@ class Activity extends CI_Controller
         $id = $this->input->post('id', TRUE);
         if (!empty($this->input->post())) {
 
-            $check_info = $this->db->select("id,sponsor,activitytitle,introduction,activitytype,poster,city,actposition,starttime,endtime,stoptime,lng,lat,state,add_time")
-                ->where('id', $id)
-                ->order_by('add_time', 'DESC')
-                ->get('activity')
-                ->row_array();
+            $sql = "id,sponsor,activitytitle,introduction,activitytype,poster,city,actposition,starttime,endtime,stoptime,lng,lat,state,add_time";
+            $check_info = $this->Common_Models->getDataOne('activity', $sql, array('id' => $id));
 
-            $sql = " SELECT p.id,p.nickname,u.photo FROM rem_participant AS p LEFT JOIN rem_user AS u ON p.nickname = u.nickname WHERE actid = {$id}";
-            $check_user = $this->db->query($sql)->result_array();
+            $check_user = $this->Activity_Models->queryActivityOne($id);
             $check_info['enterpeople'] = $check_user;
 
             if (!empty($check_info)) {
-                print json_encode($check_info, JSON_UNESCAPED_UNICODE);
+                echo json_encode($check_info, JSON_UNESCAPED_UNICODE);
             } else {
-                print "网络错误！";
+                echo "网络错误！";
             }
         }
 
@@ -190,8 +178,8 @@ class Activity extends CI_Controller
                 'actid' => $id,
                 'add_time' => time()
             );
-            $AddUser = $this->db->insert('participant', $data);
-            if ($AddUser > 0) {
+            $AddUser = $this->Common_Models->insertData('participant', $data);
+            if ($AddUser == "success") {
                 $result['status'] = "success";
                 echo json_encode($result);
             } else {
@@ -222,10 +210,10 @@ class Activity extends CI_Controller
                     'nickname' => $this->sponsor,
                     'actid' => $id
                 );
-                $delete = $this->db->delete('participant', $del);
+                $delete = $this->Common_Models->deleteData('participant', $del);
                 if ($delete) {
                     $result['status'] = "success";
-                    print json_encode($result);
+                    echo json_encode($result);
                 }
             } catch (Exception $e) {
                 echo $e->getMessage();
@@ -245,20 +233,20 @@ class Activity extends CI_Controller
     {
         $id = $this->input->post('id', TRUE);
         if (!empty($this->input->post())) {
-            $delAct = $this->db->delete('activity', array('id' => $id));
+            $delAct = $this->Common_Models->deleteData('activity', array('id' => $id));
             if ($delAct) {
-                $delPar = $this->db->delete('participant', array('actid' => $id));
+                $delPar = $this->Common_Models->deleteData('participant', array('actid' => $id));
                 if ($delPar) {
                     $result['status'] = "success";
-                    print json_encode($result);
+                    echo json_encode($result);
                 } else {
                     $result['status'] = "error";
-                    print json_encode($result);
+                    echo json_encode($result);
                 }
             }
         } else {
             $result['status'] = "亲！您提交失败o！";
-            print json_encode($result, JSON_UNESCAPED_UNICODE);
+            echo json_encode($result, JSON_UNESCAPED_UNICODE);
         }
     }
 }

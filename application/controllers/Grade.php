@@ -12,17 +12,21 @@ class Grade extends CI_Controller
 
     private $second;
 
-    public $time;
+    public  $time;
 
     private $day = 3600 * 24;
+
+    private static $setNickname;
 
     function __construct()
     {
         parent::__construct();
-        $this->nickname = $this->input->post('nickname', TRUE);//$this->input->post('nickname', TRUE)
+        $postNickname = $this->input->post('nickname', TRUE);
+        $getNickname = $this->input->get('nickname', TRUE);
+        $this->nickname = isset($postNickname) ? $postNickname : $getNickname;
         $this->time = time();
         $this->load->model('Grade_Models');
-
+        self::$setNickname = array('nickname' => $this->nickname);
     }
 
 
@@ -38,7 +42,7 @@ class Grade extends CI_Controller
 
         $this->checkMember = $this->Grade_Models->gradeQuery($this->nickname);
 
-        if (date('j') >= date('j', $this->checkMember['add_time'])) {
+        if (date('y-j') >= date('y-j', $this->checkMember['add_time'])) {
             if (!empty($this->checkMember)) {
 
                 //status时间戳小于现在时间戳执行以下代码
@@ -53,39 +57,36 @@ class Grade extends CI_Controller
                             'integral' => $this->checkMember['integral'] + 1
                         );
                     }
-                    $updateNow = $this->db->where('nickname =', $this->nickname)
-                        ->update('grade', $data);
+
+                    $updateNow = $this->Common_Models->updateData(self::$setNickname, 'grade', $data);
                     if ($updateNow) {
-                        $this->db->where('nickname =', $this->nickname)
-                            ->update('grade', array('status' => $this->day + $this->time));
+
+                        $this->Common_Models->updateData(self::$setNickname, 'grade', array('status' => $this->day + $this->time));
                     }
                 }
 
-                if (!empty($this->checkMember['online_time']) != 0 AND !empty($this->checkMember['signout_time']) != 0) {
+                    if (!empty($this->checkMember['online_time']) != 0 AND !empty($this->checkMember['signout_time']) != 0) {
 
-                    //以秒来计算小时
-                    $this->second = $this->checkMember['signout_time'] - $this->checkMember['online_time'];
+                        //以秒来计算小时临时积分
+                        $this->second = $this->checkMember['signout_time'] - $this->checkMember['online_time'];
 
-                } else {
-                    //如果onlineTime为空的就更新现在时间
-                    $this->db->where('nickname =', $this->nickname)->update('grade', array('online_time' => $this->time));
-                }
+                    } else {
+                        //如果onlineTime为空的就更新现在时间
+                        $this->Common_Models->updateData(self::$setNickname, 'grade', array('online_time' => $this->time));
+                    }
 
-                //累加更新临时积分
-                if ($this->second > 0) {
-                    $data = array(
-                        'temporary' => $this->checkMember['temporary'] + $this->second,//临时积分
-                        'online_time' => $this->time
-                    );
-                    $this->db->where('nickname =', $this->nickname)
-                        ->update('grade', $data);
-                }
-
-                sleep(3);
+                    //累加更新临时积分
+                    if ($this->second > 0) {
+                        $data = array(
+                            'temporary' => $this->checkMember['temporary'] + $this->second,//临时积分
+                        );
+                        $this->Common_Models->updateData(self::$setNickname, 'grade', $data);
+                    }
+                sleep(1);
                 $this->updateGrade($this->checkMember['integral']);
                 $this->updateVipGrade($this->checkMember['memberintegral']);
                 //计算用户用时有2个小时执行加经验
-                if ($this->checkMember['temporary'] == floor((int)7200) || $this->checkMember['temporary'] >= floor((int)7200)) {
+                if ($this->checkMember['temporary'] >= floor((int)7200)) {
                     switch ($this->checkMember['temporary']) {
                         case $this->checkMember['member'] == 1;//会员经验
 
@@ -96,11 +97,12 @@ class Grade extends CI_Controller
                                 'memberintegral' => $this->checkMember['memberintegral'] + 2,
                                 'integral' => $this->checkMember['integral'] + 2 + $integral,
                             );
-                            $updateMember = $this->db->where('nickname =', $this->nickname)->update('grade', $row);
+
+                            $updateMember = $this->Common_Models->updateData(self::$setNickname, 'grade', $row);
+
                             if ($updateMember) {
-                                $this->db->where('nickname =', $this->nickname)
-                                    ->update('grade',
-                                        array('add_time' => 3600 * 24 + $this->time, 'online_time' => 0, 'signout_time' => 0, 'temporary' => 0));
+
+                                $this->Common_Models->updateData(self::$setNickname, 'grade', array('add_time' => 3600 * 24 + $this->time, 'online_time' => 0, 'signout_time' => 0, 'temporary' => 0));
                             }
                             break;
                         case $this->checkMember['member'] == 0;//普通经验
@@ -108,18 +110,21 @@ class Grade extends CI_Controller
                             $data = array(
                                 'integral' => $this->checkMember['integral'] + 2,
                             );
-                            $updateGrade = $this->db->where('nickname =', $this->nickname)->update('grade', $data);
+
+                            $updateGrade = $this->Common_Models->updateData(self::$setNickname, 'grade', $data);
+
                             if ($updateGrade) {
-                                $this->db->where('nickname =', $this->nickname)
-                                    ->update('grade',
-                                        array('add_time' => 3600 * 24 + $this->time, 'online_time' => 0, 'signout_time' => 0, 'temporary' => 0));
+
+                                $this->Common_Models->updateData(self::$setNickname, 'grade', array('add_time' => 3600 * 24 + $this->time, 'online_time' => 0, 'signout_time' => 0, 'temporary' => 0));
                             }
                             break;
                         default;
                             break;
                     }
+
                 }
             }
+
         }
     }
 
@@ -188,7 +193,7 @@ class Grade extends CI_Controller
         $arr = null;
         for ($i = 2; $i <= 39; $i++) {
             $unm *= 2;
-            $arr[$i] = $unm . "<br />";
+            $arr[$i] = $unm;
             krsort($arr);
         }
         $data = array();//key对应的是用户级别  value对应用户经验条
@@ -200,8 +205,8 @@ class Grade extends CI_Controller
         $grade = each($data);
         $int = isset($grade['key']) ? $grade['key'] : 1;
         if (!empty(is_numeric($int))) {
-            $setUpdate = $this->db->where('nickname =', $this->nickname)->update('grade', array('grade' => $int));
-            if ($setUpdate) {
+            $setUpdate = $this->Common_Models->updateData(self::$setNickname, 'grade', array('grade' => $int));
+            if ($setUpdate == "success") {
                 return "success";
             }
         }
@@ -232,10 +237,31 @@ class Grade extends CI_Controller
         $grade = each($data);
         $int = isset($grade['key']) ? $grade['key'] : 1;
         if (!empty(is_numeric($int))) {
-            $Update = $this->db->where('nickname =', $this->nickname)->update('grade', array('membergrade' => $int));
-            if ($Update) {
+            $Update = $this->Common_Models->updateData(self::$setNickname, 'grade', array('membergrade' => $int));
+            if ($Update == "success") {
                 return "success";
             }
         }
     }
+
+    public function shareUp()
+    {
+        $get = isset($_GET) ? $_GET : '';
+        if (!empty($get)) {
+            $grade = $this->Grade_Models->gradeQuery($get['nickname']);
+            if ($get['member'] == 1) {
+                $data = [
+                    'memberintegral' => $grade['memberintegral'] + 3,
+                    'integral' => $grade['integral'] + 2
+                ];
+            } else {
+                $data = [
+                    'integral' => $grade['integral'] + 2
+                ];
+            }
+            $this->Common_Models->updateData(array('nickname' => $get['nickname']), 'grade', $data);
+        }
+    }
+
+
 }

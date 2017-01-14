@@ -1,26 +1,42 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
-require_once "Member.php";
+require_once APPPATH . 'libraries/weChatlib/WxPay.Api.php';
 
 class Test extends CI_Controller
 {
 
+    private $ci;
+
+    private static $setNickname;
+
+    private $nickname;
+
+
     function __construct()
     {
         parent::__construct();
-        $this->tarname = '148075130997598';
-        $this->nickname = "148109329079888";
-//        $this->sex = $this->input->post('sex', TRUE);
-        $this->load->model('Common_Models');
+        $this->nickname = '15217162610';
+        $this->tarname = 'L';
+        $this->password = md5("7869057");
+        $this->load->model('Member_Models');
     }
+
 
     public function index()
     {
-//        $sql = " SELECT id,sponsor,activitytitle,introduction,activitytype,poster,city,actposition,starttime,endtime,stoptime,lng,lat,state,add_time FROM rem_activity WHERE latitude LIKE '{$this->nickname}%' ORDER BY add_time DESC";
-//        $check_info = $this->db->query($sql)->result_array();
 
-        $check = $this->Common_Models->getDataAll('participant', 'nickname,actid',array('nickname'=> 1));
-        p($check);
+      $this->load->view('ceshi');
+    }
+
+    public function curlFileGetContents($url)
+    {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // 获取数据返回
+        curl_setopt($ch, CURLOPT_BINARYTRANSFER, true); // 在启用 CURLOPT_RETURNTRANSFER 时候将获取数据返回
+        $r = curl_exec($ch);
+        curl_close($ch);
+        return $r;
     }
 
 }

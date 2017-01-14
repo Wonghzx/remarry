@@ -27,7 +27,7 @@ class Grade_Models extends CI_Model
 
     public function gradeQuery($nickname)
     {
-        $where = "g.membergrade,g.memberintegral,g.grade,g.integral,g.temporary,g.online_time,g.signout_time,g.add_time,g.status,u.member";
+        $where = "g.membergrade,g.memberintegral,g.grade,g.integral,g.temporary,g.online_time,g.signout_time,g.add_time,g.status,u.member,g.state";
         $this->checkMember = $this->db->select($where)
             ->from('grade AS g')
             ->join('user AS u', 'g.nickname=u.nickname', 'left')

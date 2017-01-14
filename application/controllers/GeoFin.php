@@ -3,12 +3,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class GeoFin extends CI_Controller
 {
-
+   private $geohash;
     function __construct()
     {
         parent::__construct();
         $this->geohash = new Geohash();
-
+        $this->load->model('GeoFin_Models');
     }
 
     /**
@@ -36,7 +36,7 @@ class GeoFin extends CI_Controller
                 $where[] = " age >= {$list_age[0]} AND age <= {$list_age[1]} ";
             }
             if (!empty($place)) {
-                $where[] = " province = '{$place}' ";
+                $where[] = " province = '{$place}省' ";
             }
 
             $and = "";
@@ -52,9 +52,8 @@ class GeoFin extends CI_Controller
             $data = array();
 
             foreach ($neighbors as $key => $value) {
-                $row = "us.nickname,u.photo,us.nowlocal,us.age,us.sex,us.lng,us.lat,us.constellation,us.education,us.car,us.housing,us.height,us.shape";
-                $sql = "SELECT $row FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname WHERE {$where} {$and} latitude LIKE '{$value}%' AND us.status = '1' ";
-                $check = $this->db->query($sql)->result_array();
+
+                $check = $this->GeoFin_Models->queryNearbyPeople($where, $and, $value);
                 foreach ($check as $ke => $va) {
                     $data[] = $va;
                     $lat_it_ud = strval(getDistance($lat, $lng, $va['lat'], $va['lng'])); // 纬度   经度
@@ -65,15 +64,15 @@ class GeoFin extends CI_Controller
 
             if (!empty($data)) {
                 echo json_encode($data, JSON_UNESCAPED_UNICODE);
-            } else {
-                $sql = "SELECT us.nickname,u.photo,us.nowlocal,us.age,us.sex,us.lng,us.lat,us.constellation,us.education,us.car,us.housing,us.height,us.shape FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname WHERE  us.status = '1'";
-                $check = $this->db->query($sql)->result_array();
-                foreach ($check as $ke => $va) {
-                    $lat_it_ud = strval(getDistance($lat, $lng, $va['lat'], $va['lng'])); // 纬度   经度
-                    $check[$ke]['geohash'] = isset($lat_it_ud) ? $lat_it_ud : strval(100);
-                }
-                echo json_encode($check, JSON_UNESCAPED_UNICODE);
             }
+//            else {
+//                $check = $this->GeoFin_Models->queryNearbyPeople();
+//                foreach ($check as $ke => $va) {
+//                    $lat_it_ud = strval(getDistance($lat, $lng, $va['lat'], $va['lng'])); // 纬度   经度
+//                    $check[$ke]['geohash'] = isset($lat_it_ud) ? $lat_it_ud : strval(100);
+//                }
+//                echo json_encode($check, JSON_UNESCAPED_UNICODE);
+//            }
         }
     }
 }

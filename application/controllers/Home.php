@@ -5,6 +5,7 @@ class Home extends CI_Controller
 {
 
     static $data = array();
+
     private $province;
 
     private $age;
@@ -21,6 +22,7 @@ class Home extends CI_Controller
         $this->province = $this->input->post('province', TRUE);
         $this->age = $this->input->post('age', TRUE);
         $this->sex = $this->input->post('sex', TRUE);
+        $this->load->model('Home_Models');
 
     }
 
@@ -57,16 +59,12 @@ class Home extends CI_Controller
             $where = " RAND() LIMIT  20 ";
         }
 
-        $sql = "SELECT us.nickname,u.photo,u.userid,us.age,us.sex,us.height,us.constellation,u.memtime,g.membergrade,g.grade FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname LEFT JOIN rem_grade AS g ON us.nickname = g.nickname WHERE us.status = '1' AND {$where}   {$rand}  ";
-        $check_info = $this->db->query($sql)->result_array();
+        //查出首页数据 第一个参数为false 为有筛选条件
+        $check_info = $this->Home_Models->queryHomeInfo(true, $where, $rand);
 
-        $check_photo = $this->db->select('nickname,photourl')
-            ->get('useralbum')
-            ->result_array();
+        $check_photo = $this->Common_Models->getDataAll('useralbum', 'nickname,photourl');
 
-        $check_friends = $this->db->select('tarname')
-            ->get('friends')
-            ->result_array();
+        $check_friends = $this->Common_Models->getDataAll('friends', 'tarname');
 
         $unm = "";
         foreach ($check_info as $key => $item) {
@@ -90,40 +88,14 @@ class Home extends CI_Controller
         }
         if (!empty($check_info)) {
             echo json_encode($check_info, JSON_UNESCAPED_UNICODE);
-            $check = $this->db->select('nickname,member,memtime')->where('member =', '1')->get('user')->result_array();
+            $check = $this->Common_Models->getDataAll('user', 'nickname,member,memtime', array('member' => '1'));
             foreach ($check as $item => $value) {
                 if (time() > $value['memtime']) {
-                    $this->db->where(array('memtime' => $value['memtime'], 'member' => '1'))->update('user', array('member' => "0"));
+                    $this->Common_Models->updateData(array('memtime' => $value['memtime'], 'member' => '1'), 'user', array('member' => "0"));
                 }
             }
-        } else {
-            $sql = "SELECT us.nickname,u.photo,u.userid,us.age,us.sex,us.height,us.constellation,u.memtime,g.membergrade,g.grade FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname LEFT JOIN rem_grade AS g ON us.nickname = g.nickname WHERE  us.status = '1' AND RAND() LIMIT 0 , 20";
-            $check_info = $this->db->query($sql)->result_array();
-
-            $check_photo = $this->db->select('nickname,photourl')
-                ->get('useralbum')
-                ->result_array();
-
-            foreach ($check_info as $key => $item) {
-
-                $arr = array();
-                foreach ($check_photo as $ke => $value) {
-                    if ($item['nickname'] == $value['nickname']) {
-                        $arr[] = $value['photourl'];
-                    }
-                }
-                $check_info[$key]['countphoto'] = count($arr);
-                $row = array();
-                foreach ($check_friends as $k => $v) {
-                    if ($item['nickname'] == $v['tarname']) {
-                        $row[] = $v['tarname'];
-                    }
-                }
-                $check_info[$key]['like'] = count($row);
-
-            }
-            print json_encode($check_info, JSON_UNESCAPED_UNICODE);
         }
+
     }
 
     /**
@@ -135,23 +107,21 @@ class Home extends CI_Controller
     public function AddFriend()
     {
         $nickname = trim($this->input->post('nickname', TRUE));
-        $tarname = trim($this->input->post('tarname', TRUE));
+        $tarName = trim($this->input->post('tarname', TRUE));
 
-        $sql = " SELECT id,state FROM rem_friends WHERE nickname IN ('{$nickname}','{$tarname}') AND  tarname IN ('{$nickname}','{$tarname}') ";
-        $check_f = $this->db->query($sql)->row_array();
-
+        $check_f = $this->Home_Models->addFriend($nickname, $tarName);
         switch ($nickname) {
             case (empty($check_f));
                 try {
                     $data = array(
                         'nickname' => $nickname,
-                        'tarname' => $tarname,
+                        'tarname' => $tarName,
                         'state' => "0",
                         'add_time' => time()
                     );
                     if (!in_array('', $data)) {
-                        $AddData = $this->db->insert('friends', $data);
-                        if ($AddData > 0) {
+                        $AddData = $this->Common_Models->insertData('friends', $data);
+                        if ($AddData == "success") {
                             $result['status'] = "success";
                             echo json_encode($result);
                         } else {
@@ -163,26 +133,26 @@ class Home extends CI_Controller
                     echo $e->getMessage();
                 }
                 break;
-            case ($check_f['state'] == "0");
+            case ($check_f['state'] == "0");//如果有数据state为0的
 
+                //一下查询为判断用户多次点击喜欢  防止单方面的点击喜欢
                 $arr = array(
-                    'nickname' => $nickname,
-                    'tarname' => $tarname
+                    'nickname' => $nickname,//点击的喜欢用户
+                    'tarname' => $tarName   //被点击喜欢的用户
                 );
-                $check_user = $this->db->where($arr)
-                    ->get('friends')
-                    ->row_array();//查询是否有这条数据
+                $check_user = $this->Home_Models->queryFriendsTrue($arr);
+
+                //如果为空 双方用户达成互相喜欢成为好友
                 if ($check_user == "") {
                     $data = array(
                         'state' => "1"
                     );
-                    $up_win = $this->db->where('id =', $check_f['id'])
-                        ->update('friends', $data);
-                    if ($up_win) {
-                        $sql = "UPDATE rem_grade SET memberintegral = memberintegral+1,integral = integral+1 WHERE nickname = '$nickname'";
-                        $this->db->query($sql);
+                    $up_win = $this->Common_Models->updateData(array('id' => $check_f['id']), 'friends', $data);
+                    if ($up_win == "success") {
                         $result['status'] = 'like';
                         echo json_encode($result);
+
+                        $this->Common_Models->updateGrade();//成为有添加等级检验
                     }
                 }
                 break;

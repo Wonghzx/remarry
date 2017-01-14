@@ -14,13 +14,13 @@ class Feedback extends CI_Controller
                 'content' => $content,
                 'add_time' => time()
             );
-            $add = $this->db->insert('feedback', $data);
-            if ($add) {
+            $add = $this->Common_Models->insertData('feedback', $data);
+            if ($add == "success") {
                 $result['status'] = "success";
-                print json_encode($result);
+                echo json_encode($result);
             } else {
                 $result['status'] = "error";
-                print json_encode($result);
+                echo json_encode($result);
             }
         }
 

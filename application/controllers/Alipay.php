@@ -2,8 +2,8 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
- * alipy支付接口
- * @author onwulc@163.com
+ * 支付接口
+ * @author 842687571@qq.com
  *
  */
 class Alipay extends CI_Controller
@@ -14,9 +14,17 @@ class Alipay extends CI_Controller
         'vip_365' => 100.00,
     ];
 
+    private $appId;
+
+    private $appKey;
+
     function __construct()
     {
         parent::__construct();
+        $this->appId = $this->config->item('appId');
+        $this->appKey = $this->config->item('key');
+        $this->load->model('alipay_model');
+
     }
 
     public function index()
@@ -51,13 +59,25 @@ class Alipay extends CI_Controller
             'product_code' => 'QUICK_WAP_PAY'
         );
         $this->load->library('Alipay', $data);
-
+        $a = " appid=wx565e2bee03941892&noncestr=e904831f48e729f9ad8355a894334700&package=Sign=WXPay&partnerid=1426998302&prepayid=wx20161228111411798751d5170900620997&timestamp=1482894853&key=uKWzXroxPObHjuoaJAXGTj1SlaE6HmgW";
 
     }
 
 
-    public function pay_callback()
+    public function weChatPay()
     {
+        $Sign = self::MakeSign();
+        $second = self::getMillisecond();
+        $appid = "wx565e2bee03941892";
+        $noncestr = "e904831f48e729f9ad8355a894334700";//随机字符串
+        $package = "Sign=WXPay";
+        $partnerid = "1426998302";
+        $prepayid = "wx20161228111411798751d5170900620997";
+        $timestamp = "1482894853";
+        $key = "uKWzXroxPObHjuoaJAXGTj1SlaE6HmgW";
+
+        $pay = "appid=" . $this->appId . "&noncestr=" . $Sign . "&partnerid=" . time() . "&timetamp=" . $second . "&key=" . $this->appKey;
+        echo $pay;
 
     }
 
@@ -66,12 +86,79 @@ class Alipay extends CI_Controller
 
     }
 
-  /*
-   * 芝麻
-   */
+    /*
+     * 芝麻
+     */
     public function zmCredit()
     {
         @file_put_contents('./log.txt', json_encode($_REQUEST, JSON_UNESCAPED_UNICODE) . PHP_EOL, FILE_APPEND);
+    }
+
+
+    public function payCallBack()
+    {
+
+        $msg = array();
+
+        $postStr = file_get_contents('php://input');
+        $msg = (array)simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
+
+        if (!empty($msg['nonce_str'])) {
+            $data = array(
+                'userid' => $msg['nonce_str'],
+            );
+            $row = $this->alipay_model->queryOrder($data);
+            if ($row['uptime'] == $msg['transaction_id']) {
+                echo '失败';
+            } else {
+                $this->Common_Models->updateData(array('nickname' => $row['nickname']), 'user', array('uptime' => $msg['transaction_id']));
+
+                $num = self::Grade($msg['total_fee']);
+                $this->alipay_model->OpenVip($row['nickname'], $num);
+            }
+
+        }
+    }
+
+    /**
+     * 获取毫秒级别的时间戳
+     */
+    private static function getMillisecond()
+    {
+        //获取毫秒的时间戳
+        $time = explode(" ", microtime());
+        $time = $time[1] . ($time[0] * 1000);
+        $time2 = explode(".", $time);
+        $time = $time2[0];
+        return $time;
+    }
+
+
+    private static function MakeSign()
+    {
+        $str = "abcdefghijklnmobjistABCDEFGHIJKLNMOPQRSTXWY1234567890";
+        $sign = substr(str_shuffle($str), 0, 10); //打乱字符串
+        return md5($sign);
+    }
+
+    private static function Grade($Grade)
+    {
+        switch ($Grade) {
+            case $Grade == "1000";
+                $num = 1;
+                return $num;
+                break;
+            case $Grade == "5000";
+                $num = 2;
+                return $num;
+                break;
+            case $Grade == "10000";
+                $num = 3;
+                return $num;
+                break;
+            default;
+                break;
+        }
     }
 
 }

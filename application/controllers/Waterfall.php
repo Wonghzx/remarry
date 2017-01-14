@@ -4,6 +4,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Waterfall extends CI_Controller
 {
 
+    function __construct()
+    {
+        parent::__construct();
+        $this->load->model('Waterfall_Models');
+    }
+
     /**
      * 瀑布流
      * @param index
@@ -17,22 +23,19 @@ class Waterfall extends CI_Controller
             $where = "";
             if (!empty($sex)) {
                 if ($sex == "男") {
-                    $where = " WHERE us.sex = '女' ";
+                    $where = " AND us.sex = '女' ";
                 } else {
-                    $where = " WHERE  us.sex = '男' ";
+                    $where = " AND us.sex = '男' ";
                 }
             }
-            $check_friends = $this->db->select('tarname')
-                ->get('friends')
-                ->result_array();
 
-            $sql = " SELECT us.nickname,u.photo,us.age,us.height,us.monologue,u.member FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname  {$where} AND us.status = '1' ";
-            $check_info = $this->db->query($sql)->result_array();
+            $check_friends = $this->Common_Models->getDataAll('friends', 'tarname');//
+
+
+            $check_info = $this->Waterfall_Models->getUserALl($where);
             $row = array();
             foreach ($check_info as $item => $value) {
-//                if ($value['nickname'] == "红娘") {
-//                    unset($check_info[$item]);
-//                }
+
                 $data = array();
                 foreach ($check_friends as $it => $va) {
                     if ($value['nickname'] == $va['tarname']) {
@@ -45,22 +48,6 @@ class Waterfall extends CI_Controller
             }
             @array_multisort($row, SORT_DESC, $check_info);
             if (!empty($check_info)) {
-                echo json_encode($check_info, JSON_UNESCAPED_UNICODE);
-            } else {
-                $sql = " SELECT us.nickname,u.photo,us.age,us.height,us.monologue FROM rem_userdata AS us LEFT JOIN rem_user AS u ON us.nickname = u.nickname ";
-                $check_info = $this->db->query($sql)->result_array();
-                foreach ($check_info as $item => $value) {
-                    $data = array();
-                    foreach ($check_friends as $it => $va) {
-                        if ($value['nickname'] == $va['tarname']) {
-                            $data[] = $va['tarname'];
-                        }
-                    }
-                    $check_info[$item]['like'] = count($data);
-                    if ($value['nickname'] == "红娘") {
-                        unset($check_info[$item]);
-                    }
-                }
                 echo json_encode($check_info, JSON_UNESCAPED_UNICODE);
             }
         }

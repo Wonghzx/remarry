@@ -23,18 +23,57 @@ class GrabData extends CI_Controller
         $data_json = $this->input->post('data_json', TRUE);
         $json = json_decode($data_json, TRUE);
         if (!empty($this->input->post())) {
-            $add = $this->db->where('nickname =', $json['nickname'])->update('grabdata', array('data_json' => $data_json));
+            $add = $this->Common_Models->updateData(array('nickname' => $json['nickname']), 'grabdata', array('data_json' => $data_json));
             if ($add) {
                 $result['status'] = "success";
                 echo json_encode($result);
-                $time = $this->db->select('add_time')->where('nickname =', $json['nickname'])->get('grade')->row_array();
-                if (date('j') == date('j', $time['add_time']) || date('j') > date('j', $time['add_time'])) {
-                    $this->db->where('nickname =', $json['nickname'])->update('grade', array('signout_time' => $this->time));
+                //-----------------------//
+                $this->load->model('Grade_Models');
+                $grade = $this->Grade_Models->gradeQuery($json['nickname']);
+
+                if (date('y-j') == date('y-j', $grade['add_time']) || date('y-j') > date('y-j', $grade['add_time'])) {
+                    $data = array('signout_time' => $this->time);
+                    $this->Common_Models->updateData(array('nickname' => $json['nickname']), 'grade', $data);
+                    if ($grade['temporary'] >= 0) {
+                        $url = $url = base_url('Grade/gradeQuery') . "?nickname=" . $json['nickname'];
+                        $this->curlFileGetContents($url);
+
+                        $this->timingUp($json['nickname']);
+                    }
                 }
             } else {
                 $result['status'] = "error";
                 echo json_encode($result);
             }
         }
+    }
+
+    /*
+     * 定时访问
+     */
+    public function timingUp($nickname)
+    {
+        sleep(3);
+        $temporary = $this->Common_Models->getDataOne('grade', 'temporary', array('nickname' => $nickname));
+        if ($temporary['temporary'] >= 7200) {
+            $url = base_url('Grade/gradeQuery') . "?nickname=$nickname";
+            $this->curlFileGetContents($url);
+        }
+
+    }
+
+
+    /*
+     * 访问链接
+     */
+    public function curlFileGetContents($url)
+    {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // 获取数据返回
+        curl_setopt($ch, CURLOPT_BINARYTRANSFER, true); // 在启用 CURLOPT_RETURNTRANSFER 时候将获取数据返回
+        $r = curl_exec($ch);
+        curl_close($ch);
+        return $r;
     }
 }

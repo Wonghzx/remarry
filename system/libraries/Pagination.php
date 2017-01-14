@@ -335,7 +335,7 @@ class CI_Pagination {
 		{
 			if (($val = $this->CI->lang->line('pagination_'.$key)) !== FALSE)
 			{
-				$this->$key = $val;
+				$this->key = $val;
 			}
 		}
 

@@ -17,13 +17,13 @@ class Report extends CI_Controller
                 'content' => $content,
                 'add_time' => time()
             );
-            $add = $this->db->insert('report', $data);
+            $add = $this->Common_Models->insertData('report',$data);
             if ($add) {
                 $result['status'] = "success";
-                print json_encode($result);
+                echo json_encode($result);
             } else {
                 $result['status'] = "error";
-                print json_encode($result);
+                echo json_encode($result);
             }
         }
     }

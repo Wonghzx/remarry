@@ -19,11 +19,10 @@ class Member extends CI_Controller
         $this->password = md5(trim($this->input->post('password', TRUE)));
         $this->nickname = trim($this->input->post('nickname', TRUE));
         $this->tarname = $this->input->post('tarname', TRUE);
-//        $this->token = trim($this->input->post('token', TRUE));
         $this->time = time();
         $this->geohash = new Geohash;
         $this->row = new ServerAPI('bmdehs6pbqj2s', 'qmJhoSdpc95J');
-        session_start();
+        $this->load->model('Member_Models');
 
     }
 
@@ -41,8 +40,11 @@ class Member extends CI_Controller
 
         if (!empty($this->input->post())) {
 
-            $check_username = $this->db->select('username')->where(array('username' => $this->username))->get('user')->row_array(); //查询用户是否存在
-            $check_nickname = $this->db->select('nickname')->where(array('nickname' => $this->nickname))->get('user')->row_array(); //查询用户是否存在
+            //查询用户是否存在
+            $check_username = $this->Common_Models->getDataOne('user', 'username', array('username' => $this->username));
+
+            //查询用户是否存在
+            $check_nickname = $this->Common_Models->getDataOne('user', 'nickname', array('nickname' => $this->nickname));
 
             switch ($this->nickname) {
                 case(!empty($check_username['username']));
@@ -75,15 +77,15 @@ class Member extends CI_Controller
                             'login_time' => $this->time,
                             'add_time' => $this->time
                         );
-                        $add_user = $this->db->insert('user', $data);
-                        if ($add_user > 0) {
+
+                        $add_user = $this->Common_Models->insertData('user', $data);
+                        if ($add_user == "success") {
                             $result['status'] = "success";
-                            print json_encode($result);
+                            echo json_encode($result);
+
+
                             //用户注册成功之后再添加个人信息资料
-                            $check_user_data = $this->db->select('username,nickname')
-                                ->where('nickname', $this->nickname)
-                                ->get('user')
-                                ->row_array();
+                            $check_user_data = $this->Common_Models->getDataOne('user', 'username,nickname', array('nickname' => $this->nickname));
                             $dat = array(
                                 'nickname' => $check_user_data['nickname'],
                                 'username' => $check_user_data['username'],
@@ -92,13 +94,16 @@ class Member extends CI_Controller
                                 'age' => floor(date('Y.m.d') - $this->input->post('birthday', TRUE)),
                                 'status' => '1'
                             );
-                            $this->db->insert('userdata', $dat);
-                            $this->db->insert('mymates', array('nickname' => $check_user_data['nickname']));
-                            $this->db->insert('grabdata', array('nickname' => $check_user_data['nickname']));
-                            $this->db->insert('grade', array('nickname' => $check_user_data['nickname'], 'add_time' => $this->time, 'status' => $this->time));
+                            $this->Common_Models->insertData('userdata', $dat);
+
+                            $this->Common_Models->insertData('mymates', array('nickname' => $check_user_data['nickname']));
+
+                            $this->Common_Models->insertData('grabdata', array('nickname' => $check_user_data['nickname']));
+
+                            $this->Common_Models->insertData('grade', array('nickname' => $check_user_data['nickname'], 'add_time' => $this->time, 'status' => $this->time));
                         } else {
                             $result['status'] = "error1";
-                            print json_encode($result);
+                            echo json_encode($result);
                         }
                     }
                     break;
@@ -118,8 +123,7 @@ class Member extends CI_Controller
     public function Login()
     {
 
-        $sql = " SELECT id,username,nickname,photo,userid,member,memtime,token,autstate,add_time,login_time FROM rem_user WHERE  (nickname = '{$this->nickname}' OR username = '{$this->nickname}') AND password = '{$this->password}' ";
-        $check_user = $this->db->query($sql)->row_array();
+        $check_user = $this->Member_Models->signToLove($this->nickname, $this->password);
 
         if (!empty($check_user)) {
             if (is_numeric($this->nickname)) {
@@ -127,7 +131,7 @@ class Member extends CI_Controller
             } else {
                 $where = "nickname";
             }
-//            $this->db->where("$where =", $this->nickname)->update('grade', array('online_time' => $this->time));
+            $this->Common_Models->updateData(array('nickname' => $check_user['nickname']), 'grade', array('online_time' => $this->time));
             $data = array(
                 'province' => trim($this->input->post('province', TRUE)),
                 'lng' => $this->input->post('lng', TRUE),//更新经度
@@ -135,20 +139,15 @@ class Member extends CI_Controller
                 'latitude' => $this->geohash->encode($this->input->post('lat', TRUE), $this->input->post('lng', TRUE)), //把经纬度更新转码
                 'nowlocal' => $this->input->post('nowlocal', TRUE)
             );
-            $this->db->where("$where =", $this->nickname)
-                ->update('userdata', $data);
 
-            $add_check = $this->db->select('u.age,u.sex,u.province,g.data_json,gr.membergrade,gr.grade')
-                ->from('userdata AS u')
-                ->join('grabdata AS g', 'u.nickname = g.nickname', 'left')
-                ->join('grade AS gr', 'u.nickname = gr.nickname', 'left')
-                ->where("u.$where =", $this->nickname)
-                ->get('userdata')
-                ->row_array();
+            $this->Common_Models->updateData(array($where => $this->nickname), 'userdata', $data);//登录时更新用户经纬度
+
+            $add_check = $this->Member_Models->returnData($where, $this->nickname);//查询用户资料返回给客户
             //↓判断当前时间是否大于用户会员时间
             if (time() >= $check_user['memtime']) {
-                $this->db->where("$where =", $this->nickname)->update('user', array('member' => "0"));//大于更新会员过期
+                $this->Common_Models->updateData(array($where => $this->nickname), 'user', array('member' => "0"));
             }
+
             //查询小号
             $sex = "";
             if ($add_check['sex'] == "女") {
@@ -156,12 +155,12 @@ class Member extends CI_Controller
             } else {
                 $sex = "女";
             }
-            $local = $this->db->select('*')->where('sex =', $sex)->get('local')->result_array();
+            $local = $this->Common_Models->reserveUser($sex);
             if ($check_user['login_time'] <= time()) {
                 //----------------↓好友主动推送↓--------------//
                 $row = $this->MyChat($check_user['userid']);
-                $sql = " SELECT u.member,u.nickname,us.age,us.sex,u.userid FROM rem_user AS u LEFT JOIN rem_userdata AS us ON u.nickname = us.nickname WHERE member = '1' AND age >= {$add_check['age']} AND age <= {$add_check['age']}+10 AND status = '1' ";
-                $check = $this->db->query($sql)->result_array();
+
+                $check = $this->Member_Models->queryPushUser($add_check['age']);
                 $data = array();
                 foreach ($check as $item => $value) {
                     $l = in_array($sex, $value, TRUE);
@@ -172,33 +171,33 @@ class Member extends CI_Controller
                 $num = "";
                 if (!empty($data)) {
                     $x = @array_rand($data, 1);
-//                    if (empty($row) AND $data[$x]['userid'] != '148125000229772' ) {
-                        @$num = $data[$x]['userid'];
-//                    }
+                    if ($data[$x]['userid'] != $row['nickname'] || $data[$x]['userid'] != $row['targetname']) {
+                        $num = $data[$x]['userid'];
+                    }
                 }
                 //------------------------------------------//
-                $this->db->where("$where =", $this->nickname)->update('user', array('login_time' => 3600 * 24 * 1 + time()));
+                $this->Common_Models->updateData(array($where => $this->nickname), 'user', array('login_time' => 3600 * 24 * 1 + time()));  //更新推送信息时间
             }
             $result = [
-                'status' => 'success',
+                'status'      => 'success',
                 'membergrade' => $add_check['membergrade'],
-                'grade' => $add_check['grade'],
-                'id' => $check_user['id'],
-                'username' => $check_user['username'],
-                'userid' => $check_user['userid'],
-                'autstate' => $check_user['autstate'],
-                'age' => $add_check['age'],
-                'sex' => $add_check['sex'],
-                'province' => $add_check['province'],
-                'nickname' => $check_user['nickname'],
-                'photo' => $check_user['photo'],
-                'member' => $check_user['member'],
-                'memtime' => isset($check_user['memtime']) ? $check_user['memtime'] : 0,
-                'token' => $check_user['token'],
-                'add_time' => $check_user['add_time'],
-                'pushid' => isset($num) ? $num : NULL,
-                'data_json' => isset($add_check['data_json']) ? $add_check['data_json'] : NULL,
-                'trumpet' => json_encode($local, JSON_UNESCAPED_UNICODE),
+                'grade'       => $add_check['grade'],
+                'id'          => $check_user['id'],
+                'username'    => $check_user['username'],
+                'userid'      => $check_user['userid'],
+                'autstate'    => $check_user['autstate'],
+                'age'         => $add_check['age'],
+                'sex'         => $add_check['sex'],
+                'province'    => $add_check['province'],
+                'nickname'    => $check_user['nickname'],
+                'photo'       => $check_user['photo'],
+                'member'      => $check_user['member'],
+                'memtime'     => isset($check_user['memtime']) ? $check_user['memtime'] : 0,
+                'token'       => $check_user['token'],
+                'add_time'    => $check_user['add_time'],
+                'pushid'      => isset($num) ? $num : NULL,
+                'data_json'   => isset($add_check['data_json']) ? $add_check['data_json'] : NULL,
+                'trumpet'     => json_encode($local, JSON_UNESCAPED_UNICODE),
 
             ];
 
@@ -218,81 +217,50 @@ class Member extends CI_Controller
     public function GetUserOne()
     {
         try {
-            $member = isset($this->tarname) ? $this->tarname : $this->nickname;
+            $member = isset($this->tarname) ? $this->tarname : $this->nickname;//用户名
 
             //查询我们是不是好友，是好友就可以聊天!
-            $sql = " SELECT state FROM rem_friends WHERE nickname IN ('{$this->nickname}','{$this->tarname}') AND  tarname IN ('{$this->nickname}','{$this->tarname}') ";
-            $check_f = $this->db->query($sql)->row_array();
+            $check_f = $this->Common_Models->checkedFriends($this->nickname, $this->tarname);
             $state = isset($check_f['state']) ? $check_f['state'] : "0";
 
 
-            //查询我喜欢的好友
-            $data = array(
-                'nickname' => $this->nickname,
-                'tarname' => $this->tarname
-            );
-            $like = $this->db->select('state')->where($data)->get('friends')->row_array();
+            //查询是否我点击过的喜欢的好友
+            $like = $this->Common_Models->clickLike($this->nickname, $this->tarname);
             if (!empty($like)) {
                 $luck = "1";
             } else {
                 $luck = "0";
             }
 
-            $where = "u.id,u.username,u.userid,u.nickname,u.autstate,u.photo,u.member,us.wechat,us.qq,us.sex,us.height,us.weight,us.education,us.constellation,us.birthday,us.occupation,us.working,us.income,us.housing,us.kid,us.child,us.province,us.place,us.car,us.alcohol,us.smoke,us.shape,us.nation,us.marry,us.marriage,us.monologue,g.membergrade,g.grade";
-            $check_info = $this->db->select($where)
-                ->from('user as u')
-                ->join('userdata as us', 'u.nickname = us.nickname', 'left')
-                ->join('grade AS g', 'u.nickname = g.nickname', 'left')
-                ->where('u.nickname', $member)
-                ->get('user')
-                ->row_array();
+
+            $check_info = $this->Member_Models->getUserInfo($member);
+
             $age = date('Y.m.d') - $check_info['birthday'];
-            $sql = "SELECT photourl FROM rem_useralbum  WHERE nickname = '{$member}' ";
-            $PhotoUrl = $this->db->query($sql)->result_array();
+
+            $PhotoUrl = $this->Common_Models->getDataAll('useralbum', 'photourl', array('nickname' => $member));
+
             $photourl = array_column($PhotoUrl, 'photourl');
 
-            $mymates = $this->db->select('age,height,income,education,weight,marriage,shape,working,child,kid,alcohol')->where('nickname', $this->nickname)->get('mymates')->row_array();
+
+            $sql = "age,height,income,education,weight,marriage,shape,working,child,kid,alcohol";
+            $myMates = $this->Common_Models->getDataOne('mymates', $sql, array('nickname' => $this->nickname));
 
             $check_info['age'] = floor($age);
             $check_info['state'] = (string)$state;
             $check_info['like'] = (string)$luck;
             $check_info['photourl'] = $photourl;
-            $check_info['mymates'] = $mymates;
+            $check_info['mymates'] = $myMates;
             if ($check_info) {
-                print json_encode($check_info, JSON_UNESCAPED_UNICODE);
+                echo json_encode($check_info, JSON_UNESCAPED_UNICODE);
             } else {
                 $result['status'] = "error";
-                print json_encode($result);
+                echo json_encode($result);
             }
         } catch (Exception $e) {
             echo $e->getMessage();
         }
     }
 
-    /**
-     * 查出全部用户信息
-     * @param register
-     * @param 2016/11/6
-     * @param 18:00
-     */
-    public function GetUserAll()
-    {
-
-        $where = "u.id,u.username,u.nickname,u.photo,us.sex,us.age,us.height,us.weight,us.education,us.constellation,us.birthday,us.occupation,us.working,us.income,us.housing,us.kid,us.child,us.province,us.place,us.car,us.alcohol,us.smoke,us.shape,us.nation,us.marry,us.marriage,us.lat,us.lng,us.monologue";
-        $check_info = $this->db->select($where)
-            ->from('user as u')
-            ->join('userdata as us', 'u.nickname = us.nickname', 'left')
-            ->get('user')
-            ->result_array();
-        echo $this->db->last_query();
-        if ($check_info) {
-            print json_encode($check_info, JSON_UNESCAPED_UNICODE);
-        } else {
-            $result['status'] = "error";
-            print json_encode($result);
-        }
-
-    }
 
     /**
      * 查出我喜欢的人
@@ -307,9 +275,8 @@ class Member extends CI_Controller
                 throw new Exception('亲！昵称不能为空哦..');
 
             if (!empty($this->input->post())) {
-                $sql = "SELECT f.tarname,u.photo,f.id FROM rem_friends AS f LEFT JOIN rem_user AS u ON f.tarname = u.nickname WHERE f.nickname = '{$this->nickname}' AND state = '0' ORDER BY f.add_time DESC";
-                $check_like = $this->db->query($sql)->result_array();
-                if ($check_like) {
+                $check_like = $this->Member_Models->queryLike($this->nickname);
+                if (isset($check_like)) {
                     echo json_encode($check_like, JSON_UNESCAPED_UNICODE);
                 } else {
                     $result = "error";
@@ -334,8 +301,7 @@ class Member extends CI_Controller
             if (empty($this->nickname))
                 throw new Exception('亲！昵称不能为空哦..');
             if (!empty($this->input->post())) {
-                $sql = "SELECT f.nickname,u.photo FROM rem_friends AS f LEFT JOIN rem_user AS u ON f.nickname = u.nickname WHERE f.tarname = '{$this->nickname}' AND state = '0' ORDER BY f.add_time DESC";
-                $check_like = $this->db->query($sql)->result_array();
+                $check_like = $this->Member_Models->likeMy($this->nickname);
                 if ($check_like) {
                     echo json_encode($check_like, JSON_UNESCAPED_UNICODE);
                 } else {
@@ -365,21 +331,17 @@ class Member extends CI_Controller
 
             if (!empty($this->input->post())) {
 
-                $sql = "SELECT f.nickname,u.photo,u.userid,f.id FROM rem_friends AS f LEFT JOIN rem_user AS u ON f.nickname = u.nickname WHERE f.state = '1' AND f.tarname = '{$this->nickname}'";
-                $show_like = $this->db->query($sql)->result_array();
+                $show_like = $this->Member_Models->likeEach('tarName', $this->nickname);//tarName 为数据的tarName的好友名称
 
-                $sql = "SELECT f.tarname,u.photo,u.userid,f.id FROM rem_friends AS f LEFT JOIN rem_user AS u ON f.tarname = u.nickname WHERE  state = '1' AND f.nickname = '{$this->nickname}'";
-                $show_likes = $this->db->query($sql)->result_array();
+                $show_likes = $this->Member_Models->likeEach(false, $this->nickname);  // 为数据的nickname的好友名称
 
                 foreach ($show_likes as $key => $value) {
                     $show_likes[$key]['nickname'] = $value['tarname'];
                 }
                 $like = array_merge_recursive($show_like, $show_likes);
                 if (is_array($like)) {
-                    print json_encode($like, JSON_UNESCAPED_UNICODE);
-                    return $like;
-                } else {
-                    return false;
+                    echo json_encode($like, JSON_UNESCAPED_UNICODE);
+
                 }
             }
         } catch (Exception $e) {
@@ -403,13 +365,13 @@ class Member extends CI_Controller
             $data = array(
                 'id' => intval($id)
             );
-            $update = $this->db->delete('friends', $data);
-            if ($update) {
+            $update = $this->Common_Modesl->deleteData('friends', $data);
+            if ($update == "success") {
                 $result['status'] = "success";
-                print  json_encode($result);
+                echo json_encode($result);
             } else {
                 $result['status'] = "error";
-                print  json_encode($result);
+                echo json_encode($result);
             }
         }
     }
@@ -428,13 +390,13 @@ class Member extends CI_Controller
             $data = array(
                 'id' => intval($id)
             );
-            $update = $this->db->delete('friends', $data);
-            if ($update) {
+            $update = $this->Common_Modesl->deleteData('friends', $data);
+            if ($update == "success") {
                 $result['status'] = "success";
-                print  json_encode($result);
+                echo json_encode($result);
             } else {
                 $result['status'] = "error";
-                print  json_encode($result);
+                echo json_encode($result);
             }
         }
     }
@@ -452,21 +414,15 @@ class Member extends CI_Controller
         $num = ($page - 1) * $limit;
         if (!empty($this->input->post())) {
 
-            $sql = " SELECT c.id,c.nickname,u.userid,u.member,u.photo,us.height,us.age,c.content,c.location,c.photourl,c.add_time FROM rem_circle AS c LEFT JOIN rem_user AS u ON c.nickname = u.nickname LEFT JOIN rem_userdata AS us ON c.nickname = us.nickname WHERE c.nickname = '{$this->nickname}' ORDER BY add_time DESC LIMIT {$num},{$limit}";
-            $check_info = $this->db->query($sql)->result_array();
+            $check_info = $this->Member_Models->queryMyCircle($num, $limit, $this->nickname);
 
-            $sql = " SELECT c.id,c.nickname,us.nowlocal,u.userid,u.photo,c.content,c.circleid,c.add_time FROM rem_circle_comment AS c LEFT JOIN rem_user AS u ON c.nickname = u.nickname LEFT JOIN rem_userdata AS us ON c.nickname = us.nickname ";
-            $check_comment = $this->db->query($sql)->result_array();//评论信息
+            //调用生活圈的models加载我的信息
+            $this->load->model('Circle_Models');
+            $check_comment = $this->Circle_Models->queryCircleComment();//评论信息
 
+            $check_reply = $this->Circle_Models->queryCircleReply();//评论信息
 
-            $sql = " SELECT r.id,r.nickname,u.userid,r.targetname,r.content,r.commentid FROM rem_circle_reply AS r LEFT JOIN rem_user AS u ON r.targetname = u.nickname ";
-            $check_reply = $this->db->query($sql)->result_array();//评论信息
-
-
-            $check_like = $this->db->select('nickname,circleid,add_time')
-                ->order_by('add_time', 'ASC')
-                ->get('like')
-                ->result_array();
+            $check_like = $this->Circle_Models->queryCircleLike();//点赞
 
 
             foreach ($check_comment as $item => $value) {
@@ -496,9 +452,9 @@ class Member extends CI_Controller
                 $check_info[$item]['comment'] = $row;
             }
             if (!empty($check_info)) {
-                print json_encode($check_info, JSON_UNESCAPED_UNICODE);
+                echo json_encode($check_info, JSON_UNESCAPED_UNICODE);
             } else {
-                print json_encode(array('status' => 'You have no data'), JSON_UNESCAPED_UNICODE);
+                echo json_encode(array('status' => 'You have no data'), JSON_UNESCAPED_UNICODE);
             }
 
         }
@@ -515,14 +471,9 @@ class Member extends CI_Controller
     {
         if (!empty($this->input->post())) {
 
-//            $sql = " SELECT nickname,actid FROM rem_participant ";
-            $check_m = $this->db->select('nickname,actid')->get('participant')->result_array();
+            $check_m = $this->Common_Models->getDataAll('participant', 'nickname,actid');//活动参与人
 
-            $check_info = $this->db->select("id,sponsor,activitytitle,introduction,activitytype,poster,city,actposition,starttime,endtime,stoptime,add_time")
-                ->where('sponsor', $this->nickname)
-                ->order_by('add_time', 'DESC')
-                ->get('activity')
-                ->result_array();
+            $check_info = $this->Member_Models->myActivity($this->nickname);//活动信息
             foreach ($check_info as $items => $val) {
                 $arr = array();
                 foreach ($check_m as $value => $item) {
@@ -534,9 +485,9 @@ class Member extends CI_Controller
             }
 
             if (!empty($check_info)) {
-                print json_encode($check_info, JSON_UNESCAPED_UNICODE);
+                echo json_encode($check_info, JSON_UNESCAPED_UNICODE);
             } else {
-                print json_encode(array('status' => 'You have no data'), JSON_UNESCAPED_UNICODE);
+                echo json_encode(array('status' => 'You have no data'), JSON_UNESCAPED_UNICODE);
             }
         }
     }
@@ -550,14 +501,11 @@ class Member extends CI_Controller
     public function ParticipateActivity()
     {
         if (!empty($this->input->post())) {
-            $check = $this->db->select('nickname,actid')->where('nickname =', $this->nickname)->get('participant')->result_array();
 
+            $check = $this->Common_Models->getDataAll('participant', 'nickname,actid', array('nickname' => $this->nickname));//活动参与人
             foreach ($check as &$item) {
-                $check_info = $this->db->select("id,sponsor,activitytitle,introduction,activitytype,poster,city,actposition,starttime,endtime,stoptime,add_time")
-                    ->where('id', $item['actid'])
-                    ->order_by('add_time', 'DESC')
-                    ->get('activity')
-                    ->result_array();
+
+                $check_info = $this->Member_Models->participateActivity($item['actid']);
                 foreach ($check_info as $value => $va) {
                     $arr = array();
                     if ($va['id'] == $item['actid']) {
@@ -566,9 +514,9 @@ class Member extends CI_Controller
                     $check_info[$value]['asd'] = (string)count($arr);
                 }
                 if (!empty($check_info)) {
-                    print json_encode($check_info, JSON_UNESCAPED_UNICODE);
+                    echo json_encode($check_info, JSON_UNESCAPED_UNICODE);
                 } else {
-                    print json_encode(array('status' => 'You have no data'), JSON_UNESCAPED_UNICODE);
+                    echo json_encode(array('status' => 'You have no data'), JSON_UNESCAPED_UNICODE);
                 }
             }
 
@@ -599,12 +547,13 @@ class Member extends CI_Controller
                 default;
                     echo 'code to be executed';
             }
-            $check = $this->db->select('username,nickname,photo')->where($where, isset($id) ? $id : $username)->get('user')->row_array();
+
+            $check = $this->Common_Models->getDataOne('user', 'username,nickname,photo', array($where => isset($id) ? $id : $username));
             if ($check) {
-                print json_encode($check, JSON_UNESCAPED_UNICODE);
+                echo json_encode($check, JSON_UNESCAPED_UNICODE);
             } else {
                 $result['status'] = "error";
-                print json_encode($result);
+                echo json_encode($result);
             }
         }
     }
@@ -628,7 +577,8 @@ class Member extends CI_Controller
                 'nickname' => $this->nickname,
                 'targetname' => $this->tarname
             );
-            $check_info = $this->db->where($check)->get('readmy')->row_array();
+
+            $check_info = $this->Common_Models->getDataOne('readmy', '0', $check, false);
             if (empty($check_info)) {
                 $data = array(
                     'nickname' => $this->nickname,
@@ -636,17 +586,17 @@ class Member extends CI_Controller
                     'targetphoto' => $targetphoto,
                     'add_time' => time(),
                 );
-                $add = $this->db->insert('readmy', $data);
-                if ($add) {
+                $add = $this->Common_Models->insertData('readmy', $data);
+                if ($add == "success") {
                     $result['status'] = "success";
-                    print json_encode($result);
+                    echo json_encode($result);
                 } else {
                     $result['status'] = "error";
-                    print json_encode($result);
+                    echo json_encode($result);
                 }
             }
         } catch (Exception $e) {
-            print $e->getMessage();
+            echo $e->getMessage();
         }
     }
 
@@ -659,12 +609,13 @@ class Member extends CI_Controller
     public function ReadMy()
     {
         if (!empty($this->input->post())) {
-            $check = $this->db->select('nickname,targetphoto,add_time')->where('targetname =', $this->nickname)->get('readmy')->result_array();
+
+            $check = $this->Common_Models->getDataAll('readmy', 'nickname,targetphoto,add_time', array('targetname' => $this->nickname));
             if ($check) {
-                print json_encode($check, JSON_UNESCAPED_UNICODE);
+                echo json_encode($check, JSON_UNESCAPED_UNICODE);
             } else {
                 $result['status'] = "error";
-                print json_encode($result);
+                echo json_encode($result);
             }
         }
     }
@@ -677,12 +628,13 @@ class Member extends CI_Controller
      */
     protected function MyChat($unm)
     {
-        $sql = " SELECT nickname,targetname FROM rem_mychat WHERE (nickname = '$unm' OR  targetname = '$unm') ";
-        $check_f = $this->db->query($sql)->row_array();
+
+        $check_f = $this->Member_Models->queryMyChat($unm);  //return nickname,targetName
         if (!empty($check_f)) {
             return $check_f;
         } else {
             return false;
         }
     }
+
 }
