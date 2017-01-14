@@ -58,7 +58,7 @@ class Common_Models extends CI_Model
 
             $key = array_keys($where);
             $rew = implode($key);
-            $update = $this->db->where("$rew =", $where[$rew])->update($table, $data);
+            $update = $this->db->where($where)->update($table, $data);//"$rew =", $where[$rew]
             if ($update) {
                 return "success";
             } else {
@@ -154,7 +154,7 @@ class Common_Models extends CI_Model
     /*
      * 记录总数
      */
-    public function getCount( $where, $table, $status = FALSE)
+    public function getCount($where, $table, $status = FALSE)
     {
         if ($status == FALSE) {
             $count = $this->db->where($where)->count_all_results($table);

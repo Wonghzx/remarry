@@ -42,7 +42,7 @@ class Grade extends CI_Controller
 
         $this->checkMember = $this->Grade_Models->gradeQuery($this->nickname);
 
-        if (date('y-j') >= date('y-j', $this->checkMember['add_time'])) {
+        if ($this->time >= $this->checkMember['add_time']) {
             if (!empty($this->checkMember)) {
 
                 //status时间戳小于现在时间戳执行以下代码

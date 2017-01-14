@@ -25,7 +25,11 @@ class Test extends CI_Controller
     public function index()
     {
 
-      $this->load->view('ceshi');
+        if (date('y-j') > date('y-j', 1483585196)){
+            echo 12;
+        } else {
+            echo 2345;
+        }
     }
 
     public function curlFileGetContents($url)

@@ -28,11 +28,9 @@ class Grade_Models extends CI_Model
     public function gradeQuery($nickname)
     {
         $where = "g.membergrade,g.memberintegral,g.grade,g.integral,g.temporary,g.online_time,g.signout_time,g.add_time,g.status,u.member,g.state";
-        $this->checkMember = $this->db->select($where)
-            ->from('grade AS g')
-            ->join('user AS u', 'g.nickname=u.nickname', 'left')
-            ->where('g.nickname =', $nickname)
-            ->get('grade')->row_array();
+
+        $sql = "SELECT {$where} FROM rem_grade AS g LEFT JOIN rem_user AS u ON g.nickname = u.nickname WHERE g.nickname = '{$nickname}'";
+        $this->checkMember = $this->db->query($sql)->row_array();
         return $this->checkMember;
     }
 }

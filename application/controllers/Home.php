@@ -89,9 +89,10 @@ class Home extends CI_Controller
         if (!empty($check_info)) {
             echo json_encode($check_info, JSON_UNESCAPED_UNICODE);
             $check = $this->Common_Models->getDataAll('user', 'nickname,member,memtime', array('member' => '1'));
+
             foreach ($check as $item => $value) {
                 if (time() > $value['memtime']) {
-                    $this->Common_Models->updateData(array('memtime' => $value['memtime'], 'member' => '1'), 'user', array('member' => "0"));
+                    $this->Common_Models->updateData(array('memtime' => $value['memtime']), 'user', array('member' => "0"));
                 }
             }
         }

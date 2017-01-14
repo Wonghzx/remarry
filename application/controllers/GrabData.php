@@ -31,7 +31,8 @@ class GrabData extends CI_Controller
                 $this->load->model('Grade_Models');
                 $grade = $this->Grade_Models->gradeQuery($json['nickname']);
 
-                if (date('y-j') == date('y-j', $grade['add_time']) || date('y-j') > date('y-j', $grade['add_time'])) {
+                if ($this->time >= $grade['add_time']) {
+
                     $data = array('signout_time' => $this->time);
                     $this->Common_Models->updateData(array('nickname' => $json['nickname']), 'grade', $data);
                     if ($grade['temporary'] >= 0) {
